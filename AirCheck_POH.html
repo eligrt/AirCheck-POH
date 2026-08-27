@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirCheck POH</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4ecdc;--paper-hi:#fbf6e8;--paper-edge:#e3d4ad;
+  --ink:#1c3d6e;--ink-soft:#5a4a3a;--ink-faint:#8a7a5a;
+  --gold:#c8a04a;--gold-deep:#a87c2e;--line:#ddd2bc;
+  --done:#1f6f3f;--surround:#16171a;
+  --mono:'IBM Plex Mono',monospace;
+
+  /* ── 3-tier hue system ── */
+  /* strong = top tab + active sub-tab · tint = page paper · rail = idle sub-tab */
+  --white-strong:#ffffff;  --white-tint:#f7f1e5;  --white-rail:#efe7d4;  --white-txt:#2b2620;
+  --red-strong:#c0201f;    --red-tint:#f7dedd;     --red-rail:#f0cfce;    --red-txt:#5c0f0e;
+  --yellow-strong:#f2c200; --yellow-tint:#fdf4cf;  --yellow-rail:#f7ecb0; --yellow-txt:#5c4700;
+  --green-strong:#1f8a4c;  --green-tint:#dff1e6;   --green-rail:#c3e4cf;  --green-txt:#134a2c;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+/* prevent accidental text selection / copy-paste on touch devices */
+.screen,.screen *{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none;}
+body{background:var(--surround);font-family:'Heebo',sans-serif;color:#e8e0cf;padding:24px 16px 60px;}
+.num{font-family:var(--mono);}
+
+.top{max-width:1100px;margin:0 auto 20px;text-align:center;}
+.top h1{font-size:23px;font-weight:800;color:#f4ecdc;direction:ltr;}
+.top .sub{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-top:6px;direction:ltr;font-family:var(--mono);}
+.top p{font-size:12.5px;color:#a99e8a;max-width:560px;margin:12px auto 0;}
+.switch{display:flex;gap:8px;justify-content:center;margin:18px 0 4px;}
+.switch button{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:#26272b;color:#a99e8a;border:1px solid #3a3b40;border-radius:8px;padding:8px 18px;cursor:pointer;transition:all .15s;font-family:var(--mono);}
+.switch button.act{background:var(--ink);color:#f4ecdc;border-color:var(--gold-deep);}
+
+.stage{display:flex;justify-content:center;margin-top:26px;}
+/* portrait tablet + phone */
+.tablet{width:600px;height:800px;border-radius:28px;background:#0a0a0b;padding:14px;box-shadow:0 16px 50px rgba(0,0,0,.55);}
+.phone{width:340px;height:720px;border-radius:38px;background:#0a0a0b;padding:11px;box-shadow:0 16px 50px rgba(0,0,0,.55);}
+.screen{width:100%;height:100%;border-radius:16px;overflow:hidden;background:var(--paper);position:relative;display:flex;flex-direction:column;}
+.phone .screen{border-radius:28px;}
+
+/* app bar */
+.appbar{background:var(--ink);color:#f4ecdc;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:2px solid var(--gold);z-index:20;}
+.appbar .brand{font-size:15px;font-weight:800;direction:ltr;letter-spacing:.02em;}
+.appbar .brand small{font-weight:400;color:rgba(244,236,220,.5);font-size:11px;margin-inline-start:6px;}
+.newflight{font-size:9.5px;letter-spacing:.05em;border:1px solid rgba(244,236,220,.4);border-radius:6px;padding:6px 10px;color:rgba(244,236,220,.9);cursor:pointer;background:transparent;white-space:nowrap;font-family:var(--mono);}
+.newflight:active{background:rgba(255,255,255,.1);}
+
+/* top color bar */
+.colorbar{display:flex;flex-shrink:0;z-index:15;}
+.colorbar .cb{flex:1;padding:11px 4px;text-align:center;font-size:14px;font-weight:800;cursor:pointer;border-inline-start:1px solid rgba(255,255,255,.22);transition:filter .12s;position:relative;}
+.colorbar .cb:first-child{border-inline-start:none;}
+.cb.c-white{background:var(--white-strong);color:var(--ink);}
+.cb.c-red{background:var(--red-strong);color:#fff;}
+.cb.c-yellow{background:var(--yellow-strong);color:var(--yellow-txt);}
+.cb.c-green{background:var(--green-strong);color:#fff;}
+.colorbar .cb:not(.act){filter:brightness(.82) saturate(.8);opacity:.9;}
+.colorbar .cb.act{box-shadow:inset 0 -4px 0 rgba(0,0,0,.28);z-index:2;}
+
+.body{flex:1;display:flex;overflow:hidden;min-height:0;}
+
+/* ── single rail, normal horizontal text ── */
+.rail{flex-shrink:0;width:25%;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:thin;scrollbar-color:rgba(28,61,110,.35) transparent;}
+.phone .rail{width:54px;}
+.rail::-webkit-scrollbar{width:5px;}
+.rail::-webkit-scrollbar-track{background:transparent;}
+.rail::-webkit-scrollbar-thumb{background:rgba(28,61,110,.3);border-radius:10px;}
+.list{scrollbar-width:thin;scrollbar-color:rgba(28,61,110,.3) transparent;}
+.list::-webkit-scrollbar{width:6px;}
+.list::-webkit-scrollbar-track{background:transparent;}
+.list::-webkit-scrollbar-thumb{background:rgba(28,61,110,.28);border-radius:10px;}
+/* phone tabs: rotated vertical text */
+.phone .rtab{padding:14px 0;display:flex;align-items:center;justify-content:center;min-height:92px;text-align:center;}
+.phone .rtab .rlabel{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);line-height:1.25;white-space:normal;font-size:12.5px;font-weight:700;}
+.rail::-webkit-scrollbar{width:4px;}
+.rail::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:3px;}
+.rtab{padding:14px 12px;font-size:12.5px;font-weight:600;line-height:1.3;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.08);-webkit-tap-highlight-color:transparent;transition:background .12s;position:relative;}
+/* visited/marked dot — clean, no ring, navy status color */
+.mark{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--ink);}
+.tablet .rtab .mark{top:50%;transform:translateY(-50%);inset-inline-end:11px;}
+.phone .rtab .mark{bottom:10px;inset-inline-start:50%;transform:translateX(-50%);}
+/* on dark/strong active tabs the navy dot would vanish → white */
+.rail.r-red .rtab.act .mark,.rail.r-green .rtab.act .mark{background:#fff;}
+.cb{position:relative;}
+.cbmark{top:50%;transform:translateY(-50%);inset-inline-start:11px;}
+.cb.c-red .cbmark,.cb.c-green .cbmark{background:#fff;}
+.cb.c-white .cbmark{background:var(--ink);}
+/* idle tab = rail tone of category */
+.rail.r-white .rtab{background:var(--white-rail);color:var(--white-txt);}
+.rail.r-red .rtab{background:var(--red-rail);color:var(--red-txt);}
+.rail.r-yellow .rtab{background:var(--yellow-rail);color:var(--yellow-txt);}
+.rail.r-green .rtab{background:var(--green-rail);color:var(--green-txt);}
+/* active tab = strong category color, with clear pop (c) */
+.rail .rtab.act{position:relative;font-weight:800;box-shadow:inset 4px 0 0 rgba(0,0,0,.34), 0 1px 6px rgba(0,0,0,.18);z-index:1;}
+.rail.r-white .rtab.act{background:#fff;color:var(--ink);}
+.rail.r-red .rtab.act{background:var(--red-strong);color:#fff;}
+.rail.r-yellow .rtab.act{background:var(--yellow-strong);color:var(--yellow-txt);}
+.rail.r-green .rtab.act{background:var(--green-strong);color:#fff;}
+/* idle tabs flatter so active stands out */
+.rail .rtab:not(.act){opacity:.82;}
+
+/* content pane — paper tinted to category */
+.pane{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+.pane.p-white{background:var(--white-tint);}
+.pane.p-red{background:var(--red-tint);}
+.pane.p-yellow{background:var(--yellow-tint);}
+.pane.p-green{background:var(--green-tint);}
+
+.pane-hd{flex-shrink:0;padding:11px 14px 9px;display:flex;align-items:center;gap:9px;border-bottom:2px solid var(--ink);}
+.pane-hd .ptitle{font-size:15.5px;font-weight:800;}
+.p-white .ptitle{color:var(--ink);}
+.p-red .ptitle{color:var(--red-txt);}
+.p-yellow .ptitle{color:var(--yellow-txt);}
+.p-green .ptitle{color:var(--green-txt);}
+.pane-hd .pcount{margin-inline-start:auto;font-size:11px;font-weight:600;padding:3px 9px;border-radius:10px;background:var(--ink);color:#f4ecdc;}
+.clear-sec{font-size:10px;letter-spacing:.02em;border:1px solid rgba(0,0,0,.3);border-radius:6px;padding:5px 10px;cursor:pointer;background:rgba(255,255,255,.7);margin-inline-start:8px;font-family:'Heebo';font-weight:700;white-space:nowrap;}
+.p-white .clear-sec{color:var(--ink);}
+.p-red .clear-sec{color:var(--red-txt);border-color:rgba(92,15,14,.4);}
+.p-yellow .clear-sec{color:#5c4700;border-color:rgba(92,71,0,.4);}
+.p-green .clear-sec{color:var(--green-txt);border-color:rgba(19,74,44,.4);}
+
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+.row{display:flex;align-items:center;gap:11px;padding:15px 14px;border-bottom:1px solid rgba(0,0,0,.09);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.row .box{width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.28);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.55);transition:all .15s;}
+.row .box svg{width:12px;height:12px;stroke:#fff;stroke-width:3.5;fill:none;opacity:0;}
+.row.done .box{background:var(--done);border-color:var(--done);}
+.row.done .box svg{opacity:1;}
+.row .tx{flex:1;font-size:13.5px;font-weight:500;line-height:1.3;}
+.p-white .tx{color:var(--ink);}
+.p-red .tx{color:var(--red-txt);}
+.p-yellow .tx{color:#3f3100;}
+.p-green .tx{color:var(--green-txt);}
+.row .val{font-size:13px;font-weight:600;text-align:left;flex-shrink:0;max-width:44%;line-height:1.3;}
+.p-white .val{color:#6a5d3f;}
+.p-red .val{color:var(--red-txt);}
+.p-yellow .val{color:#6b5200;}
+.p-green .val{color:var(--green-txt);}
+.row .val.num{font-family:var(--mono);direction:ltr;font-weight:500;}
+.row.done .tx{text-decoration:line-through;opacity:.45;}
+.row.done .val{opacity:.4;}
+
+.row.ro{cursor:default;}
+.hdr{padding:8px 14px;background:rgba(0,0,0,.09);font-size:12px;font-weight:800;border-bottom:1px solid rgba(0,0,0,.12);}
+.p-white .hdr{color:var(--ink);}
+.p-red .hdr{color:var(--red-txt);}
+.p-yellow .hdr{color:#5c4700;}
+.p-green .hdr{color:var(--green-txt);}
+
+.callout{margin:10px 14px;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;}
+.callout.note{background:#fff8e0;border:1px solid #d4a900;color:#4a3800;}
+.callout.warning{background:#fff;border:2px solid var(--red-strong);color:#7a1210;font-weight:600;}
+.callout .ttl{font-weight:800;display:block;margin-bottom:3px;}
+.callout ul{list-style:none;padding:0;margin:0;}
+.callout li{padding-inline-start:15px;position:relative;margin:3px 0;}
+.callout li::before{content:"•";position:absolute;right:0;font-weight:700;}
+
+/* scroll cues */
+.cue{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--paper-hi);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.2);z-index:8;pointer-events:none;opacity:0;transition:opacity .25s;}
+.cue.show{opacity:1;}
+.cue svg{width:15px;height:15px;stroke:var(--gold-deep);stroke-width:2.5;fill:none;}
+.listcue{bottom:10px;left:50%;transform:translateX(-50%);}
+.railcue{bottom:8px;width:24px;height:24px;left:50%;transform:translateX(-50%);}
+.railcue svg{width:12px;height:12px;}
+
+.confirm{position:absolute;inset:0;background:rgba(22,15,8,.7);z-index:40;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);}
+.confirm.show{display:flex;}
+.confirm .card{background:var(--paper);border:2px solid var(--ink);border-radius:10px;max-width:280px;overflow:hidden;text-align:center;}
+.confirm .chd{background:var(--ink);color:#f4ecdc;padding:14px;font-weight:700;font-size:15px;}
+.confirm .cbd{padding:14px;font-size:12.5px;color:var(--ink-soft);}
+.confirm .btns{display:flex;gap:8px;padding:0 14px 14px;}
+.confirm button{flex:1;padding:10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Heebo';}
+.confirm .no{background:transparent;border:1.5px solid var(--line);color:var(--ink-soft);}
+.confirm .yes{background:var(--red-strong);color:#fff;}
+
+.appfooter{flex-shrink:0;text-align:center;padding:7px;font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;border-top:1px solid var(--gold-deep);background:var(--paper-hi);direction:ltr;}
+.hint{max-width:1100px;margin:22px auto 0;text-align:center;font-size:11.5px;color:#807567;direction:rtl;}
+.hint b{color:#c9bfad;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>AirCheck POH</h1>
+  <div class="sub">v1.01.010 · portrait · single rail</div>
+  <p>למעלה: 4 צבעי ה-POH. מימין: סעיפי הצבע הנבחר. נגיעה בפריט = תיוג, נגיעה שוב = ביטול.</p>
+  <div class="switch">
+    <button id="btnTablet" class="act" onclick="setDevice('tablet')">Tablet</button>
+    <button id="btnPhone" onclick="setDevice('phone')">Phone</button>
+  </div>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="hint">
+  <b>נסה:</b> בחר צבע למעלה · הסעיפים מימין מתחלפים · פתח <b>חירום</b> לעמוד בגוון אדום רך · גע בפריטים לתיוג · <b>בטל סימונים</b> / NEW FLIGHT.
+</div>
+
+<script>
+const POH = [{"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כיסוי פיטו", "val": "הסר", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "צ'וקים", "val": "הסר", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כיסוי חופה", "val": "הסר", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "מבט כללי על המטוס", "val": "בדוק – לחץ אויר בצמיגים, כתמי שמן, מים, דלק תחת המטוס", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "להבים וספינר", "val": "ברגים, שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "מיכל מים", "val": "במידה ולא בוצע DI הסר מכסה מנוע ובדוק כמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "רדיאטור ופתחי איוורור", "val": "ללא סדקים, ללא חסימה", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "מקרן שמן", "val": "שלמות, ללא נזילות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "מנוע", "val": "ללא נזילות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "שמן", "val": "בדוק כמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "דלק", "val": "נקז", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "אגזוז", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "חיפוי מנוע", "val": "שלמות, מחוזק כראוי", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע קדמי - מחבר ציר", "val": "מחוברים כראוי", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע קדמי - צמיג", "val": "נפח תקין, חריצים, שלמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע קדמי - משכך", "val": "ללא סדקים, ללא נזילות, גובה משכך", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע קדמי - מבנה כן הנסע", "val": "ללא סדקים, ללא עיוותים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע שמאל - זרוע", "val": "בדוק שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע שמאל - בלמים", "val": "מכלול בלם שלם, ללא נזילות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע שמאל - צמיג", "val": "ג'נט שלם, נפח תקין", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - משטח כנף", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - שפת התקפה", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - כמות דלק", "val": "בדוק", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - מכסה דלק", "val": "סגור", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - קצה כנף", "val": "מחובר כראוי, שלמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - שפת זרימה", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף שמאל - מאזנות ומדפים", "val": "שלמות, חופשיות תנועה, בדיקת מחברים, ללא תנועה אופקית", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - גוף צד שמאל", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - אנטנות רדיו וטרנספונדר", "val": "שלמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - ספיריר", "val": "שלמות, ללא סדקים, בדוק צבע", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - מייצב כיוון", "val": "שלמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - הגה כיוון וגובה", "val": "שלמות, מחברים, חופשיות, תנועה בכל הטווח", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - מקזז", "val": "שלמות, מחברים, חופשיות תנועה", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "גוף והגאים - גוף צד ימין", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - משטח כנף", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - מאזנות ומדפים", "val": "חופשיות תנועה בדיקת מחברים ללא תנועה אופקית", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - שפת זרימה", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - קצה כנף", "val": "מחובר כראוי, שלמות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - צינור פיטו ונחיר סטטי", "val": "מחובר כראוי, שלמות לא סתום/מכוסה", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - שפת התקפה", "val": "שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - כמות דלק", "val": "בדוק", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כנף ימין - מכסה דלק", "val": "סגור", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע ימין - זרוע", "val": "בדוק שלמות, ללא סדקים", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע ימין - בלמים", "val": "מכלול בלם שלם, ללא נזילות", "type": "item"}, {"cat": "white", "sec": "בדיקות חיצוניות", "sub": null, "item": "כן נסע ימין - צמיג", "val": "ג'נט שלם, נפח תקין", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "בדיקות חיצוניות", "val": "הושלמו", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "מושבים", "val": "וו חרם מרחק", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "חגורות", "val": "הדוק וגור", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "משקל ואיזון", "val": "בוצע", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "ספר מטוס", "val": "פתח שורה", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "תא מטען", "val": "מאובטח", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "מכשירים", "val": "בדוק שלמות", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "בלם חניה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "נתיכים", "val": "ודא כולם בפנים", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "חופה", "val": "סגור. ודא נעול", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "הגאים", "val": "בדוק תנועה משתחיי היגוי וחופשיות תנועה", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "דוושות", "val": "ללא עיוותים, במרכז", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "מערכת הגה", "val": "חופשיות תנועה", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "ברז דלק", "val": "ודא ברז ימין פתוח", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "כמות דלק", "val": "בדוק כ 30 ליטר", "type": "item"}, {"cat": "white", "sec": "לפני התנעה", "sub": null, "item": "מקזז", "val": "באמצע", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מתג אורות ניווט", "val": "מופעל", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מתג ראשי", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "משאבת דלק חשמלית", "val": "הפעל 10 שנ' וכבה", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "צ'וק בהתנעה ראשונית/קרה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מצערת", "val": "סרק", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מנורת טעינה", "val": "דולקת", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "קידמת מטוס", "val": "נקייה", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מפסקי מגנטו אלק'", "val": "שניהם ON", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "הכרז בקול רם", "val": "התנעה", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מפסק התנעה", "val": "הפעל עד שהמנוע תופס", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "סל\"ד", "val": "2000 - 2500 RPM", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "לחץ שמן", "val": "תקין (תוך 5 שניות)", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "מנורת טעינה", "val": "כבויה", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": null, "item": "צ'וק במידה והופעל", "val": "סגור לאט", "type": "item"}, {"cat": "white", "sec": "התנעה", "sub": "אם המטוס חזר מטיסה בשעה שלפני ההתנעה או שהטמפ' החיצונית מעל 28 מעלות", "item": null, "val": null, "type": "header"}, {"cat": "white", "sec": "התנעה חמה", "sub": null, "item": "סל\"ד ל 3,000", "val": "החזק 4 דקות", "type": "item"}, {"cat": "white", "sec": "התנעה חמה", "sub": null, "item": "סל\"ד למקסימום", "val": "למשך 10 שניות", "type": "item"}, {"cat": "white", "sec": "התנעה חמה", "sub": null, "item": "לחץ דלק", "val": "ודא בטווח ויציב", "type": "item"}, {"cat": "white", "sec": "התנעה חמה", "sub": null, "item": "סל\"ד וסרק", "val": "2000 RPM", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "ראשי אוויוניקה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "רדיו", "val": "ודא דלוק, כוון תדר, ווסת עוצמה, וודא קשר פנים", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "שידור", "val": "הודע על השעה", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "טרנספונדר", "val": "5100 STBY", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "מכשירי טיסה", "val": "מכוילים", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "מדפים", "val": "הורד עד הסוף והרם למצב המראה T/O", "type": "item"}, {"cat": "white", "sec": "אחרי התנעה", "sub": null, "item": "מצלמות", "val": "אם יש ודא דלוק", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": null, "item": "חופה", "val": "סגור, וודא נעול", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": null, "item": "בלם חניה", "val": "שחרר", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": null, "item": "בלמים", "val": "בדוק", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": null, "item": "מכשירים", "val": "בדוק", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": null, "item": "מצערת", "val": "כנדרש עד 3000 סל\"ד", "type": "item"}, {"cat": "white", "sec": "הסעה", "sub": "הערה: אין לאפשר לנתוני CHT לחרוג מ 135 מעלות במהלך הסעה", "item": null, "val": null, "type": "note"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "בלם חניה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "חופה", "val": "נעולה, מנורה כבויה", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "ברזי דלק", "val": "ודא ברז ימין פתוח", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "הגאים", "val": "תנועה חופשית ומלאה", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מקזז", "val": "באמצע", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "משאבת דלק חשמלית", "val": "הפעל ובדוק עלית לחץ", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מדפים", "val": "15 מעלות / T/O", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "ברזי דלק", "val": "ודא ברז ימין פתוח", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מכשירי טיסה", "val": "מכוילים", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "טרנספונדר", "val": "5100 ALT", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "חגורות", "val": "מהודקות", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "אור נחיתה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": " וודא טמפ' ולחצים לפני בדיקות מנוע", "val": "בדוק כאשר CHT מעל 70 מעלות או טמפ' שמן מעל 50 (ביום חם בצע בדיקת מנוע ו/או המתנות כאשר המטוס עומד עם האף לרוח)", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "טמפ' ולחצים", "val": "בטווח הירוק", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מצערת פתח", "val": "4000 סל\"ד", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "בדיקת מצתים (מגנטו)", "val": "מקס' נפילה 300 סל\"ד", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מערכת סגור לסרק", "val": "מינימום 1400 סל\"ד", "type": "item"}, {"cat": "white", "sec": "לפני המראה", "sub": null, "item": "מצערת", "val": "2000 סל\"ד", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "וודא פיינל נקי והתיישר על המסלול", "val": "רוח, כוון מסלול ומצפנים", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מצערת", "val": "פתח מלא (ברזל לברזל)", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מנוע", "val": "סל\"ד מעל 5000, מד מהירות מגיב, לחץ דלק בטווח", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "רוטציה", "val": "55-60 מי\"ש", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מהירות נסיקה", "val": "70 מי\"ש", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": "לאחר חציית גובה 300 רגל", "item": null, "val": null, "type": "header"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מדפים", "val": "הרם", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "משאבת דלק", "val": "הפסק", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מקזז", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "מהירות", "val": "70 מי\"ש", "type": "item"}, {"cat": "white", "sec": "המראה וטיפוס", "sub": null, "item": "עם הגעה לגובה", "val": "האץ ל 90-100 מי\"ש", "type": "item"}, {"cat": "white", "sec": "טיפוס", "sub": null, "item": "מהירות", "val": "80 מי\"ש", "type": "item"}, {"cat": "white", "sec": "טיפוס", "sub": null, "item": "מצערת", "val": "5000-5500 סל\"ד", "type": "item"}, {"cat": "white", "sec": "טיפוס", "sub": null, "item": "מכשירי מנוע", "val": "בטווח הירוק", "type": "item"}, {"cat": "white", "sec": "טיפוס", "sub": null, "item": "מקזז", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "טיפוס", "sub": null, "item": "בטיפוס מתמשך", "val": "שים לב לטמפ מנוע", "type": "item"}, {"cat": "white", "sec": "שיוט", "sub": null, "item": "מהירות", "val": "90 – 100 מי\"ש", "type": "item"}, {"cat": "white", "sec": "שיוט", "sub": null, "item": "מצערת", "val": "מקס' מתמשך עד 5500 סל\"ד", "type": "item"}, {"cat": "white", "sec": "שיוט", "sub": null, "item": "מכשירי מנוע", "val": "בטווח הירוק (בדוק בעקביות)", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": null, "item": "מהירות", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": null, "item": "חימום קרבורטור", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": null, "item": "מצערת", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": null, "item": "מקזז", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": null, "item": "מחווני מנוע", "val": "בטווח הירוק", "type": "item"}, {"cat": "white", "sec": "הנמכה", "sub": "הערה: במקרה של רוחות צד חזרות או משבים, הגדל מהירות גישה ב-5 מי\"ש, שקול מדפים ב T/O", "item": null, "val": null, "type": "note"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "מהירות", "val": "65-75 מי\"ש", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "מחווני מנוע", "val": "בטווח הירוק", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "מדפים", "val": "T/O (15 מעלות)", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "מקזז", "val": "כנדרש", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "משאבת דלק חשמלית", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "בלמים", "val": "הדק ובדוק", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "בצלע בסיס", "val": "מדפים 40 מעלות", "type": "item"}, {"cat": "white", "sec": "לפני נחיתה", "sub": null, "item": "פיינל", "val": "60 מי\"ש", "type": "item"}, {"cat": "white", "sec": "לאחר נחיתה", "sub": null, "item": "מצערת", "val": "סרק", "type": "item"}, {"cat": "white", "sec": "לאחר נחיתה", "sub": null, "item": "מדפים", "val": "הרם", "type": "item"}, {"cat": "white", "sec": "לאחר נחיתה", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "מצערת", "val": "סרק", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "בלם חניה", "val": "הפעל", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "רדיו ואוויוניקה", "val": "כבה", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "Ipad", "val": "כבה", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "אורות", "val": "כבה", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "Tach", "val": "רשום", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "מצתים", "val": "סגור בהדרגה, ודא נפילת סל\"ד", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "מצלמות", "val": "אם קיים ודא כבוי", "type": "item"}, {"cat": "white", "sec": "הדממה", "sub": null, "item": "ספר מטוס", "val": "השלם רישום", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מהירות", "val": "68 מי\"ש", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "שדה לנחיתה", "val": "בחר", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "חגורות", "val": "הדק", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "דיווח", "val": "נחיתת אונס, + \" מיקום\"", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": "אם הזמן קצר", "item": null, "val": null, "type": "header"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "טרנספונדר", "val": "7700", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "משאבת דלק", "val": "הפעל", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מיכל דלק", "val": "החלף", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": "ניסיונות לאיתור תקלה", "item": null, "val": null, "type": "header"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מצערת", "val": "בדוק מיקום וחיכוך", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מכשירי מנוע", "val": "בדוק", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "צ'וק", "val": "ודא כבוי", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "ברזי דלק", "val": "בחר מיכל מלא", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "משאבת דלק חשמלית", "val": "הפעל", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "לחץ דלק", "val": "ודא בטווח", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "חימום קרבורטור", "val": "הפעל", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מצתים", "val": "ודא שניהם", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מתג ראשי", "val": "פועל", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "ניסיונות התנעה", "val": "בצע", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": "לפני נחיתה", "item": null, "val": null, "type": "header"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מדפים", "val": "כנדרש", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מצתים", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": "באויר - במהלך טיסה", "item": null, "val": null, "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מצערת", "val": "קדימה מלא", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "פתחי איוורור", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "חימום תא", "val": "סגור (אם קיים)", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מצתים", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מהירות גלישה", "val": "68 מי\"ש", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "נחת בהקדם", "val": null, "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": "אזהרה: אין לנסות להניע את המנוע מחדש, גם אם האש כבתה. יש להתארגן לנחיתת אונס!", "item": null, "val": null, "type": "warning"}, {"cat": "red", "sec": "אש במנוע", "sub": "על הקרקע", "item": null, "val": null, "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "חימום תא", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מצערת", "val": "קדימה מלא", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "מצתים", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "צא מהמטוס", "val": "בזריזות", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": null, "item": "במידה ומתאפשר", "val": "כבה אש בעזרת מטף", "type": "item"}, {"cat": "red", "sec": "אש במנוע", "sub": "אזהרה: אין לכבות את האש בעזרת מים!", "item": null, "val": null, "type": "warning"}, {"cat": "red", "sec": "החלצות מסחרור", "sub": null, "item": "מצערת", "val": "סרק", "type": "item"}, {"cat": "red", "sec": "החלצות מסחרור", "sub": null, "item": "דוושת כיוון", "val": "בכיוון הפוך לכיוון הסיבוב", "type": "item"}, {"cat": "red", "sec": "החלצות מסחרור", "sub": null, "item": "סטיק", "val": "דחוף קדימה", "type": "item"}, {"cat": "red", "sec": "החלצות מסחרור", "sub": null, "item": "בגמר הסחרור", "val": "משוך בעדינות לישרה ואופקית", "type": "item"}, {"cat": "red", "sec": "החלצות מסחרור", "sub": "אזהרה: אין לנסות לעצור את הסחרור בעזרת מאזנות. שים לב: אין לעבור מהירות Vne!", "item": null, "val": null, "type": "warning"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "מצערת", "val": "סרק", "type": "item"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "בלמים", "val": "הפעל בהתאם", "type": "item"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "מדפים", "val": "הרם", "type": "item"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "מצתים", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "הפסקת המראה", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "מנוע לסרק ונחת מידית על המסלול הנותר/ישר קדימה", "val": null, "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "חגורות", "val": "הדק", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "מצתים", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע לאחר ניתוק", "sub": "אזהרה: אין לבצע פניית 180 חזרה למסלול!", "item": null, "val": null, "type": "warning"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מהירות גלישה מיטבית", "val": "68 מי\"ש", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "שדה לנחיתה", "val": "בחר בהקדם", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "חגורות", "val": "הדק", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "דיווח", "val": "חרום נחיתת אונס ב – \"מקום\"", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": "אם הגובה מאפשר בצע", "item": null, "val": null, "type": "header"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "משאבת דלק חשמלית", "val": "ודא פועלת", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "ברזי דלק", "val": "ודא ברז ימין פתוח", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מדי דלק", "val": "בדוק כמות", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "לחץ דלק", "val": "ודא בטווח", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מצתים", "val": "ודא מחוברים", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מצערת", "val": "מקם להתנעה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "ניסיונות התנעה", "val": "בצע", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": "לפני נחיתה", "item": null, "val": null, "type": "header"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מדפים", "val": "כנדרש", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "ברזי דלק", "val": "סגור", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "משאבת דלק חשמלית", "val": "כבה", "type": "item"}, {"cat": "red", "sec": "כשל מנוע בטיפוס", "sub": null, "item": "מצתים ומתג ראשי", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "נחיתה ללא מדפים", "sub": null, "item": "נתיך FLAPS/TRIM", "val": "ודא בפנים (אם בחוץ לחץ פעם אחת בלבד)", "type": "item"}, {"cat": "yellow", "sec": "נחיתה ללא מדפים", "sub": null, "item": "מצב מדפים", "val": "ודא סימטרי", "type": "item"}, {"cat": "yellow", "sec": "נחיתה ללא מדפים", "sub": null, "item": "פיינל", "val": "שטוח, ודא נקי ממכשולים", "type": "item"}, {"cat": "yellow", "sec": "נחיתה ללא מדפים", "sub": null, "item": "מהירות", "val": "לא נמוכה מ 55 מי\"ש", "type": "item"}, {"cat": "yellow", "sec": "נחיתה עם תקר", "sub": null, "item": "גישה", "val": "נורמלית", "type": "item"}, {"cat": "yellow", "sec": "נחיתה עם תקר", "sub": null, "item": "מנוע", "val": "כבה לפני נגיעה", "type": "item"}, {"cat": "yellow", "sec": "נחיתה עם תקר", "sub": null, "item": "צרכנים", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "נחיתה עם תקר", "sub": null, "item": "נגיעה", "val": "על הגלגל התקין", "type": "item"}, {"cat": "yellow", "sec": "נחיתה עם תקר", "sub": "החזק את המטוס על הגלגל התקין ככל האפשר. \nהתכונן לנטיית המטוס לסבוב לכיוון הגלגל התקול. \nאם גלגל אף מפונצ'ר שמור מצב אף באוויר ככל האפשר לאחר הנגיעה. \nודא גלגל אף ישר בנגיעה", "item": null, "val": null, "type": "note"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": null, "item": "שדה לנחיתה", "val": "בחר שדה ארוך ונקי ממכשולים", "type": "item"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": null, "item": "מדפים", "val": "מלא", "type": "item"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": null, "item": "מהירות נגיעה", "val": "מינימום האפשרית", "type": "item"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": "לאחר נגיעה", "item": null, "val": null, "type": "header"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": null, "item": "מדפים", "val": "הרם", "type": "item"}, {"cat": "yellow", "sec": "כשל בלמים", "sub": null, "item": "מצתים ומתג ראשי", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "לחץ וטמפ' שמן", "sub": "לחץ שמן נמוך (קשת צהובה) + טמפ' שמן בטווח הירוק", "item": null, "val": null, "type": "header"}, {"cat": "yellow", "sec": "לחץ וטמפ' שמן", "sub": null, "item": "נחת בהקדם", "val": null, "type": "item"}, {"cat": "yellow", "sec": "לחץ וטמפ' שמן", "sub": "לחץ שמן נמוך (קשת צהובה) + טמפ' שמן גבוהה", "item": null, "val": null, "type": "header"}, {"cat": "yellow", "sec": "לחץ וטמפ' שמן", "sub": null, "item": "נחת בהקדם - התכונן לנחיתת אונס", "val": null, "type": "item"}, {"cat": "yellow", "sec": "לחץ דלק נמוך", "sub": null, "item": "משאבת דלק חשמלית", "val": "הפעל", "type": "item"}, {"cat": "yellow", "sec": "לחץ דלק נמוך", "sub": null, "item": "ברזי דלק", "val": "החלף לבדיקה", "type": "item"}, {"cat": "yellow", "sec": "לחץ דלק נמוך", "sub": null, "item": "לחץ דלק", "val": "ודא בטווח", "type": "item"}, {"cat": "yellow", "sec": "לחץ דלק נמוך", "sub": null, "item": "אם לחץ לא בטווח", "val": "נחת בהקדם", "type": "item"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": "ניתן לזהות בירידת סל\"ד ללא תזוזת מצערת, כאשר בהנמכה בסל\"ד נמוך ו/או בתנאי לחות גבוהים", "item": null, "val": null, "type": "note"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": null, "item": "חימום קרבורטור", "val": "הפעל", "type": "item"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": null, "item": "מצערת", "val": "הגבר", "type": "item"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": null, "item": "סל\"ד", "val": "ודא חזרה למצב נורמלי", "type": "item"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": null, "item": "חימום קרבורטור", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "התקרחות קרבורטור", "sub": null, "item": "חזור לתנאי טיסה נורמלים", "val": null, "type": "item"}, {"cat": "yellow", "sec": "מנוע רועד", "sub": null, "item": "ודא רעד פוחת עם הפחתת מצערת", "val": null, "type": "item"}, {"cat": "yellow", "sec": "מנוע רועד", "sub": null, "item": "נחת בהקדם", "val": null, "type": "item"}, {"cat": "yellow", "sec": "מנוע רועד", "sub": null, "item": "התכונן לכשל מנוע ולנחיתת אונס", "val": null, "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": "נורית \"אי טעינה\" דולקת", "item": null, "val": null, "type": "note"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "וולטמטר", "val": "בדוק (אם מותקן)", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "צרכנים לא נחוצים", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "נחת בהקדם", "val": "מצבר מלא ותקין מאפשר הפעלת מקזז, מדפים ומשאבת דלק חשמלית למשך כ 20 דקות", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": "טעינת יתר - וולטמטר מעל 16V", "item": null, "val": null, "type": "note"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "וולטמטר", "val": "ודא ירידת מתח", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "מתג ראשי", "val": "הפעל", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "וולטמטר", "val": "ודא עלייה מתח במגבלות", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": "אם המתח עדיין חורג מהמגבלות", "item": null, "val": null, "type": "header"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "צרכנים לא נחוצים", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "חשמל", "sub": null, "item": "נחת בהקדם", "val": null, "type": "item"}, {"cat": "yellow", "sec": "שריפה חשמלית", "sub": "ניתן לזהות ע\"י ריח פלסטיק שרוף ועשן לבן", "item": null, "val": null, "type": "note"}, {"cat": "yellow", "sec": "שריפה חשמלית", "sub": null, "item": "מתג ראשי", "val": "כבה", "type": "item"}, {"cat": "yellow", "sec": "שריפה חשמלית", "sub": null, "item": "פתחי איוורור", "val": "פתח", "type": "item"}, {"cat": "yellow", "sec": "שריפה חשמלית", "sub": null, "item": "חימום תא", "val": "סגור", "type": "item"}, {"cat": "yellow", "sec": "שריפה חשמלית", "sub": null, "item": "נחת בהקדם", "val": "התכונן לנחיתה ללא מדפים וללא מקזז אם חשמלי", "type": "item"}, {"cat": "yellow", "sec": "תקלת קשר", "sub": null, "item": "אם אפשר שדר רדיו עיוור", "val": null, "type": "item"}, {"cat": "yellow", "sec": "תקלת קשר", "sub": null, "item": "טרנספונדר", "val": "7600", "type": "item"}, {"cat": "yellow", "sec": "תקלת קשר", "sub": null, "item": "המשך בטיסה לשדה המתאים הקרוב", "val": null, "type": "item"}, {"cat": "yellow", "sec": "תקלת קשר", "sub": null, "item": "נחת ע\"פ נוהל אובדן קשר", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות כלליות", "sub": null, "item": "הטקסן מאושר לטיסה אך ורק בתנאי VFR יום", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות כלליות", "sub": null, "item": "אין לבצע אווירובטיקה מכל סוג שהוא", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות כלליות", "sub": null, "item": "מגבלות הטיסה הם לביצוע תמרונים המותרים בביצוע תהליכים רגילים בלבד", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות כלליות", "sub": null, "item": "מותר לבצע הזדקרות ב-1 G בלבד", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות כלליות", "sub": null, "item": "מותר לבצע שנדל שמיניה עצלה ופניות עד 60 מעלות הטיה", "val": null, "type": "item"}, {"cat": "green", "sec": "מגבלות משקל", "sub": null, "item": "משקל ריק", "val": "300-350 ק\"ג (בדוק בספר המטוס)", "type": "item"}, {"cat": "green", "sec": "מגבלות משקל", "sub": null, "item": "משקל מירבי", "val": "580-570 ק\"ג (בדוק בספר המטוס)", "type": "item"}, {"cat": "green", "sec": "מגבלות משקל", "sub": null, "item": "משקל צוות מירבי", "val": "180 ק\"ג", "type": "item"}, {"cat": "green", "sec": "מגבלות משקל", "sub": null, "item": "משקל טייס בודד", "val": "מעל 70 ק\"ג", "type": "item"}, {"cat": "green", "sec": "מגבלות משקל", "sub": null, "item": "משקל משא בתא אחורי", "val": "12-16 ק\"ג (בדוק בספר המטוס)", "type": "item"}, {"cat": "green", "sec": "מגבלות G", "sub": null, "item": "ללא מדפים", "val": "חיובי 3.8 / שלילי 2.0", "type": "item"}, {"cat": "green", "sec": "מגבלות G", "sub": null, "item": "עם מדפים", "val": "חיובי 1.9 / שלילי 0", "type": "item"}, {"cat": "green", "sec": "לחץ אויר בגלגלים", "sub": null, "item": "גלגלים ראשיים", "val": "2.2 - 2.4 בר", "type": "item"}, {"cat": "green", "sec": "לחץ אויר בגלגלים", "sub": null, "item": "גלגל אף", "val": "1.8 בר", "type": "item"}, {"cat": "green", "sec": "מערכת דלק", "sub": null, "item": "שני קווים למנוע", "val": "אחד דרך משאבה מכנית והשני דרך המשאבה החשמלית", "type": "item"}, {"cat": "green", "sec": "מערכת דלק", "sub": null, "item": "כמות בכל מיכל", "val": "50 ליטר", "type": "item"}, {"cat": "green", "sec": "מערכת דלק", "sub": null, "item": "ללא שימוש", "val": "2 ליטר בכל מיכל", "type": "item"}, {"cat": "green", "sec": "מערכת דלק", "sub": null, "item": "דלק חוזר", "val": "למיכל ימין", "type": "item"}, {"cat": "green", "sec": "החלפת מיכלים", "sub": null, "item": "הפעל משאבת דלק, העבר מיכל, ודא לחץ דלק תקין, כבה משאבה", "val": null, "type": "item"}, {"cat": "green", "sec": "החלפת מיכלים", "sub": null, "item": "תצרוכת ממוצעת", "val": "18 ליטר לשעת טיסה", "type": "item"}, {"cat": "green", "sec": "החלפת מיכלים", "sub": null, "item": "מנורת אזהרת דלק", "val": "נמוך צהובה לכל מיכל מתחת ל-7 ליטר", "type": "item"}, {"cat": "green", "sec": "החלפת מיכלים", "sub": null, "item": "סוג דלק", "val": "RON 95 או יותר", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vne – Never Exceed", "val": "230 קמ\"ש / 142 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vmo – Max Structural Cruise", "val": "195 קמ\"ש / 121 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Va – Maneuvering", "val": "145 קמ\"ש / 90 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vfe – Max w/ full flaps", "val": "120 קמ\"ש / 75 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vs – Stall no flap", "val": "74 קמ\"ש / 46 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vs1 – Stall takeoff (15°)", "val": "70 קמ\"ש / 44 מ\"ש", "type": "item"}, {"cat": "green", "sec": "מהירויות", "sub": null, "item": "Vs0 – Stall landing (45°)", "val": "65 קמ\"ש / 40 מ\"ש", "type": "item"}, {"cat": "green", "sec": "סקלות מכשירים", "sub": null, "item": "RPM – ירוק", "val": "1400-5500 · צהוב 5500-5800 · אדום 5800", "type": "item"}, {"cat": "green", "sec": "סקלות מכשירים", "sub": null, "item": "לחץ דלק", "val": "אדום מין 0.15 · ירוק 0.15-0.4 · אדום מקס 0.4 בר", "type": "item"}, {"cat": "green", "sec": "סקלות מכשירים", "sub": null, "item": "לחץ שמן", "val": "אדום 0.8 · צהוב 0.8-2 · ירוק 2-5 · צהוב 5-7 · אדום 7 בר", "type": "item"}, {"cat": "green", "sec": "סקלות מכשירים", "sub": null, "item": "טמפ' שמן", "val": "אדום 50° · צהוב 50-90° · ירוק 90-100° · צהוב 110-130° · אדום 130°", "type": "item"}, {"cat": "green", "sec": "סקלות מכשירים", "sub": null, "item": "CHT", "val": "אדום 50° · ירוק 50-100° · צהוב 110-135° · אדום 135°", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "תנאי בדיקה", "val": "0 רוח, גובה פני הים, טמפ' 15 מעלות, משקל 570 ק\"ג", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Take off run", "val": "120 m", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Take off distance", "val": "360 m", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Take off speed", "val": "53 mph", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Landing distance", "val": "275 m", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Landing run", "val": "65 m", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "Landing speed", "val": "55 mph", "type": "item"}, {"cat": "green", "sec": "ביצועים", "sub": null, "item": "רוח צד מירבית", "val": "17 קשר", "type": "item"}];
+const CAT_ORDER=['white','red','yellow','green'];
+const CAT_LABEL={white:'שגרה',red:'חירום',yellow:'תקלות',green:'כללי'};
+
+const sections=[]; const seen=new Map();
+for(const r of POH){const k=r.cat+'|'+r.sec;if(!seen.has(k)){seen.set(k,sections.length);sections.push({cat:r.cat,sec:r.sec,rows:[]});}sections[seen.get(k)].rows.push(r);}
+sections.forEach((s,i)=>{s.id=i;s.itemCount=s.rows.filter(r=>r.type==='item').length;});
+// כללי (green) is reference/read-only — EXCEPT tasks like החלפת מיכלים
+const GREEN_TICKABLE=['החלפת מיכלים'];
+sections.forEach(s=>{ s.readonly = (s.cat==='green' && !GREEN_TICKABLE.includes(s.sec)); });
+function firstOf(cat){return sections.find(s=>s.cat===cat).id;}
+
+let device='tablet';
+let activeCat='white';
+const lastSection={};  // per-category memory
+CAT_ORDER.forEach(c=>{ lastSection[c]=firstOf(c); });
+let activeSection=lastSection['white'];
+const ticked={};
+const key=(sid,i)=>sid+':'+i;
+const CHK='<svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>';
+
+function colorbarHTML(){
+  return CAT_ORDER.map(c=>{
+    const dot=catHasMarks(c)?'<span class="mark cbmark"></span>':'';
+    return `<div class="cb c-${c} ${c===activeCat?'act':''}" onclick="pickCat('${c}')">${CAT_LABEL[c]}${dot}</div>`;
+  }).join('');
+}
+function sectionHasMarks(s){return s.rows.some((r,i)=>r.type==='item'&&ticked[key(s.id,i)]);}
+function catHasMarks(c){return sections.filter(s=>s.cat===c).some(sectionHasMarks);}
+function railHTML(){
+  const secs=sections.filter(s=>s.cat===activeCat);
+  return secs.map(s=>{
+    const cls=s.id===activeSection?'act':'';
+    const dot=sectionHasMarks(s)?'<span class="mark"></span>':'';
+    return `<div class="rtab ${cls}" onclick="go(${s.id})"><span class="rlabel">${s.sec}</span>${dot}</div>`;
+  }).join('');
+}
+function bulletize(t){const p=String(t).split('\n').map(x=>x.trim()).filter(Boolean);if(p.length<=1)return `<div>${p[0]||t}</div>`;return '<ul>'+p.map(x=>`<li>${x}</li>`).join('')+'</ul>';}
+function listHTML(){
+  const s=sections[activeSection];let h='';const ro=s.readonly;
+  s.rows.forEach((r,idx)=>{
+    if(r.type==='item'){
+      const isNum=r.val&&!/[\u0590-\u05FF]/.test(r.val);
+      const v=r.val?`<div class="val ${isNum?'num':''}">${r.val}</div>`:'';
+      if(ro){
+        h+=`<div class="row ro"><div class="tx">${r.item||''}</div>${v}</div>`;
+      } else {
+        const d=ticked[key(s.id,idx)]?'done':'';
+        h+=`<div class="row ${d}" data-idx="${idx}" onclick="tick(${idx})"><div class="box">${CHK}</div><div class="tx">${r.item||''}</div>${v}</div>`;
+      }
+    } else if(r.type==='header'){h+=`<div class="hdr">${r.sub}</div>`;}
+    else if(r.type==='note'){h+=`<div class="callout note">${bulletize(r.sub)}</div>`;}
+    else if(r.type==='warning'){h+=`<div class="callout warning"><span class="ttl">⚠ אזהרה</span>${bulletize(String(r.sub).replace(/^אזהרה:?\s*/,''))}</div>`;}
+  });
+  return h;
+}
+function paneHTML(){
+  const s=sections[activeSection];
+  const showCtl = !s.readonly && s.itemCount>0;
+  const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
+  return `<div class="pane-hd"><div class="ptitle">${s.sec}</div>${showCtl?`<div class="pcount num">${done}/${s.itemCount}</div>`:''}${showCtl?`<button class="clear-sec" onclick="clearSection(event)">בטל סימונים</button>`:''}</div>
+    <div class="list" id="list" onscroll="onListScroll()">${listHTML()}</div>
+    <div class="cue listcue" id="listcue"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>`;
+}
+function render(opts){
+  opts=opts||{};
+  const listEl=document.getElementById('list');
+  const railEl=document.getElementById('rail');
+  const keepList=opts.list||opts.both;
+  const keepRail=opts.rail||opts.both;
+  const ls=keepList&&listEl?listEl.scrollTop:0;
+  const rs=keepRail&&railEl?railEl.scrollTop:0;
+  const shell=device==='tablet'?'tablet':'phone';
+  document.getElementById('stage').innerHTML=`
+  <div class="${shell}"><div class="screen">
+    <div class="appbar"><div class="brand">AirCheck POH <small>Texan 570</small></div><button class="newflight" onclick="askNF()">◇ NEW FLIGHT</button></div>
+    <div class="colorbar">${colorbarHTML()}</div>
+    <div class="body">
+      <div class="rail r-${activeCat}" id="rail" onscroll="onRailScroll()">${railHTML()}
+        <div class="cue railcue" id="railcue"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+      <div class="pane p-${activeCat}">${paneHTML()}</div>
+    </div>
+    <div class="appfooter">AirCheck POH · v1.01.010 · built by eligrt</div>
+    <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
+  </div></div>`;
+  const l=document.getElementById('list'),r=document.getElementById('rail');
+  if(keepList&&l)l.scrollTop=ls;
+  if(keepRail&&r)r.scrollTop=rs;
+  setTimeout(()=>{onListScroll();onRailScroll();},30);
+}
+function setDevice(d){device=d;document.getElementById('btnTablet').classList.toggle('act',d==='tablet');document.getElementById('btnPhone').classList.toggle('act',d==='phone');render();}
+function pickCat(c){activeCat=c;activeSection=lastSection[c];render();}
+function go(id){activeSection=id;lastSection[activeCat]=id;render({rail:true});}
+function tick(i){
+  const s=sections[activeSection];const k=key(s.id,i);
+  if(ticked[k])delete ticked[k];else ticked[k]=true;
+  const domRow=document.querySelector(`#list .row[data-idx="${i}"]`);
+  if(domRow)domRow.classList.toggle('done', !!ticked[k]);
+  updateCounter();updateDots();
+}
+function updateCounter(){
+  const s=sections[activeSection];
+  const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
+  const el=document.querySelector('.pcount');if(el)el.textContent=`${done}/${s.itemCount}`;
+}
+function updateDots(){
+  // rail dots
+  document.querySelectorAll('#rail .rtab').forEach((tab,idx)=>{
+    const secs=sections.filter(x=>x.cat===activeCat);
+    const s=secs[idx];if(!s)return;
+    let m=tab.querySelector('.mark');const has=sectionHasMarks(s);
+    if(has&&!m){m=document.createElement('span');m.className='mark';tab.appendChild(m);}
+    else if(!has&&m){m.remove();}
+  });
+  // color-tab dots
+  document.querySelectorAll('.colorbar .cb').forEach((cb,idx)=>{
+    const c=CAT_ORDER[idx];let m=cb.querySelector('.cbmark');const has=catHasMarks(c);
+    if(has&&!m){m=document.createElement('span');m.className='mark cbmark';cb.appendChild(m);}
+    else if(!has&&m){m.remove();}
+  });
+}
+function clearSection(e){if(e)e.stopPropagation();const s=sections[activeSection];s.rows.forEach((r,i)=>delete ticked[key(s.id,i)]);render({both:true});}
+function askNF(){document.getElementById('confirm').classList.add('show');}
+function closeNF(){document.getElementById('confirm').classList.remove('show');}
+function doNF(){for(const k in ticked)delete ticked[k];closeNF();render();}
+function onListScroll(){const l=document.getElementById('list'),c=document.getElementById('listcue');if(!l||!c)return;c.classList.toggle('show',l.scrollHeight-l.clientHeight-l.scrollTop>24);}
+function onRailScroll(){const r=document.getElementById('rail'),c=document.getElementById('railcue');if(!r||!c)return;c.classList.toggle('show',r.scrollHeight-r.clientHeight-r.scrollTop>16);}
+render();
+</script>
+</body>
+</html>
