@@ -158,11 +158,14 @@ body{background:var(--surround);font-family:'Heebo',sans-serif;color:#e8e0cf;pad
 .callout li::before{content:"•";position:absolute;right:0;font-weight:700;}
 
 /* scroll cues */
-.cue{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--paper-hi);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.2);z-index:8;pointer-events:none;opacity:0;transition:opacity .25s;}
-.cue.show{opacity:1;}
+.cue{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--paper-hi);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.2);z-index:8;cursor:pointer;opacity:0;transition:opacity .25s;-webkit-tap-highlight-color:transparent;left:50%;transform:translateX(-50%);}
+.cue.show{opacity:1;animation:cuebob 1.6s ease-in-out infinite;}
+.cue.show:active{animation:none;transform:translateX(-50%) scale(.9);}
 .cue svg{width:15px;height:15px;stroke:var(--gold-deep);stroke-width:2.5;fill:none;}
-.listcue{bottom:10px;left:50%;transform:translateX(-50%);}
-.railcue{bottom:8px;width:24px;height:24px;left:50%;transform:translateX(-50%);}
+@keyframes cuebob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(4px)}}
+@media(prefers-reduced-motion:reduce){.cue.show{animation:none;}}
+.listcue{bottom:10px;}
+.railcue{bottom:8px;width:24px;height:24px;}
 .railcue svg{width:12px;height:12px;}
 
 .confirm{position:absolute;inset:0;background:rgba(22,15,8,.7);z-index:40;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(2px);}
@@ -184,7 +187,7 @@ body{background:var(--surround);font-family:'Heebo',sans-serif;color:#e8e0cf;pad
 
 <div class="top">
   <h1>AirCheck POH</h1>
-  <div class="sub">v1.01.010 · portrait · single rail</div>
+  <div class="sub">v1.01.012 · portrait · single rail</div>
   <p>למעלה: 4 צבעי ה-POH. מימין: סעיפי הצבע הנבחר. נגיעה בפריט = תיוג, נגיעה שוב = ביטול.</p>
   <div class="switch">
     <button id="btnTablet" class="act" onclick="setDevice('tablet')">Tablet</button>
@@ -261,7 +264,7 @@ function paneHTML(){
   const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
   return `<div class="pane-hd"><div class="ptitle">${s.sec}</div>${showCtl?`<div class="pcount num">${done}/${s.itemCount}</div>`:''}${showCtl?`<button class="clear-sec" onclick="clearSection(event)">בטל סימונים</button>`:''}</div>
     <div class="list" id="list" onscroll="onListScroll()">${listHTML()}</div>
-    <div class="cue listcue" id="listcue"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>`;
+    <div class="cue listcue" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>`;
 }
 function render(opts){
   opts=opts||{};
@@ -278,11 +281,11 @@ function render(opts){
     <div class="colorbar">${colorbarHTML()}</div>
     <div class="body">
       <div class="rail r-${activeCat}" id="rail" onscroll="onRailScroll()">${railHTML()}
-        <div class="cue railcue" id="railcue"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="cue railcue" id="railcue" onclick="scrollRail()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter">AirCheck POH · v1.01.010 · built by eligrt</div>
+    <div class="appfooter">AirCheck POH · v1.01.012 · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
   </div></div>`;
   const l=document.getElementById('list'),r=document.getElementById('rail');
@@ -326,6 +329,8 @@ function askNF(){document.getElementById('confirm').classList.add('show');}
 function closeNF(){document.getElementById('confirm').classList.remove('show');}
 function doNF(){for(const k in ticked)delete ticked[k];closeNF();render();}
 function onListScroll(){const l=document.getElementById('list'),c=document.getElementById('listcue');if(!l||!c)return;c.classList.toggle('show',l.scrollHeight-l.clientHeight-l.scrollTop>24);}
+function scrollList(){const l=document.getElementById('list');if(l)l.scrollBy({top:l.clientHeight*0.8,behavior:'smooth'});}
+function scrollRail(){const r=document.getElementById('rail');if(r)r.scrollBy({top:r.clientHeight*0.8,behavior:'smooth'});}
 function onRailScroll(){const r=document.getElementById('rail'),c=document.getElementById('railcue');if(!r||!c)return;c.classList.toggle('show',r.scrollHeight-r.clientHeight-r.scrollTop>16);}
 render();
 </script>
