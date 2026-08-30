@@ -68,13 +68,22 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .phone .rtab .rlabel{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);line-height:1.25;white-space:normal;font-size:12.5px;font-weight:700;}
 .rtab{padding:14px 12px;font-size:12.5px;font-weight:600;line-height:1.3;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.08);-webkit-tap-highlight-color:transparent;transition:background .12s;position:relative;}
 .tablet .rtab{padding:17px 13px;font-size:13.5px;}
-/* visited/marked dot — clean, no ring, navy status color */
-.mark{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--ink);}
-.tablet .rtab .mark{top:50%;transform:translateY(-50%);inset-inline-end:11px;}
-.phone .rtab .mark{bottom:10px;inset-inline-start:50%;transform:translateX(-50%);}
-/* on dark/strong active tabs the navy dot would vanish → white */
-.rail.r-red .rtab.act .mark,.rail.r-green .rtab.act .mark{background:#fff;}
+/* per-section progress fill — a thin track on the tab's inner edge, fills as items are ticked */
+.ptrack{position:absolute;background:var(--paper-edge);z-index:0;pointer-events:none;overflow:hidden;}
+.pfill{position:absolute;background:var(--done);}
+/* tablet: vertical track on inner (pane-side) edge, fills top→bottom */
+.tablet .rtab .ptrack{top:0;bottom:0;inset-inline-end:0;width:4px;}
+.tablet .rtab .pfill{top:0;inset-inline-end:0;width:100%;}
+/* phone: horizontal track on top edge, fills across */
+.phone .rtab .ptrack{top:0;inset-inline-start:0;inset-inline-end:0;height:4px;}
+.phone .rtab .pfill{top:0;inset-inline-end:0;height:100%;}
+/* keep the tab label above the track */
+.rtab .rlabel,.tablet .rtab>*:not(.ptrack){position:relative;z-index:1;}
+/* selected tab: same green, brighter, so it reads against the strong active bg (no new colour to learn) */
+.rail .rtab.act .pfill{background:#4ade80;}
+.rail.r-red .rtab.act .ptrack,.rail.r-green .rtab.act .ptrack{background:rgba(255,255,255,.28);}
 .cb{position:relative;}
+.mark{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--ink);}
 .cbmark{top:50%;transform:translateY(-50%);inset-inline-start:11px;}
 .cb.c-red .cbmark,.cb.c-green .cbmark{background:#fff;}
 .cb.c-white .cbmark{background:var(--ink);}
@@ -232,13 +241,19 @@ function colorbarHTML(){
   }).join('');
 }
 function sectionHasMarks(s){return s.rows.some((r,i)=>r.type==='item'&&ticked[key(s.id,i)]);}
+function sectionFrac(s){
+  if(s.readonly||!s.itemCount)return 0;
+  const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
+  return done/s.itemCount;
+}
 function catHasMarks(c){return sections.filter(s=>s.cat===c).some(sectionHasMarks);}
 function railHTML(){
   const secs=sections.filter(s=>s.cat===activeCat);
   return secs.map(s=>{
     const cls=s.id===activeSection?'act':'';
-    const dot=sectionHasMarks(s)?'<span class="mark"></span>':'';
-    return `<div class="rtab ${cls}" onclick="go(${s.id})"><span class="rlabel">${s.sec}</span>${dot}</div>`;
+    const f=sectionFrac(s);
+    const prog=(!s.readonly&&s.itemCount)?`<span class="ptrack"><span class="pfill" style="${device==='phone'?'width':'height'}:${Math.round(f*100)}%"></span></span>`:'';
+    return `<div class="rtab ${cls}" onclick="go(${s.id})">${prog}<span class="rlabel">${s.sec}</span></div>`;
   }).join('');
 }
 function bulletize(t){const p=String(t).split('\n').map(x=>x.trim()).filter(Boolean);if(p.length<=1)return `<div>${p[0]||t}</div>`;return '<ul>'+p.map(x=>`<li>${x}</li>`).join('')+'</ul>';}
@@ -290,7 +305,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.022 · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.024 · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">האפליקציה נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש "בקליק".</span>היא גרסת אונליין של הבדּ"ח, אך אינה מחליפה את הבדּ"ח הרשמי שבמטוס.<br><span class="pic">כטייס מפקד (PIC) תמיד תוודא מול הבדּ"ח הרשמי.</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com">אשמח אם תעדכן</a>.</span><span class="sign">טיסה טובה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -317,13 +332,13 @@ function updateCounter(){
   const el=document.querySelector('.pcount');if(el)el.textContent=`${done}/${s.itemCount}`;
 }
 function updateDots(){
-  // rail dots
+  // rail per-section progress fills
+  const secs=sections.filter(x=>x.cat===activeCat);
   document.querySelectorAll('#rail .rtab').forEach((tab,idx)=>{
-    const secs=sections.filter(x=>x.cat===activeCat);
     const s=secs[idx];if(!s)return;
-    let m=tab.querySelector('.mark');const has=sectionHasMarks(s);
-    if(has&&!m){m=document.createElement('span');m.className='mark';tab.appendChild(m);}
-    else if(!has&&m){m.remove();}
+    const fill=tab.querySelector('.pfill');if(!fill)return;
+    const pct=Math.round(sectionFrac(s)*100)+'%';
+    if(device==='phone')fill.style.width=pct;else fill.style.height=pct;
   });
   // color-tab dots
   document.querySelectorAll('.colorbar .cb').forEach((cb,idx)=>{
