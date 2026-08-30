@@ -305,7 +305,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.024 · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.026 · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">האפליקציה נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש "בקליק".</span>היא גרסת אונליין של הבדּ"ח, אך אינה מחליפה את הבדּ"ח הרשמי שבמטוס.<br><span class="pic">כטייס מפקד (PIC) תמיד תוודא מול הבדּ"ח הרשמי.</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com">אשמח אם תעדכן</a>.</span><span class="sign">טיסה טובה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -375,6 +375,99 @@ function resetWelcome(){
 
 render();
 maybeShowWelcome();
+</script>
+
+<!-- ══ ANALYTICS CAPTURE (Firebase Realtime DB) ══
+     Lightweight, fire-and-forget. Writes one node per device to pilots/{deviceId}.
+     Admin dashboard (AirCheck_POH_Admin.html) reads this back. -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getDatabase, ref, set, get, increment } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+
+  // ⚠️ REPLACE with the config from your NEW standalone POH Firebase project
+  const firebaseConfig = {
+    apiKey: "AIzaSyCGiKfIKFAsFoWcmeTLQ8WNRfyjwhI6U9Q",
+    authDomain: "aircheck-poh.firebaseapp.com",
+    databaseURL: "https://aircheck-poh-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "aircheck-poh",
+    storageBucket: "aircheck-poh.firebasestorage.app",
+    messagingSenderId: "220461298223",
+    appId: "1:220461298223:web:17d25b447930ac7b7c0cda"
+  };
+
+  const CONFIGURED = firebaseConfig.apiKey !== "REPLACE_ME";
+
+  function getDeviceId(){
+    let id=null;
+    try{id=localStorage.getItem('poh_device_id');}catch(e){}
+    if(!id){
+      id='d_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      try{localStorage.setItem('poh_device_id',id);}catch(e){}
+    }
+    return id;
+  }
+  function getOS(){
+    const ua=navigator.userAgent;
+    if(/iPad|iPhone|iPod/.test(ua))return'iOS';
+    if(/Android/.test(ua))return'Android';
+    return'Desktop';
+  }
+  function getAppVersion(){
+    const el=document.querySelector('.appfooter');
+    if(!el)return'';
+    const m=el.textContent.match(/v\d+\.\d+\.\d+/);
+    return m?m[0]:'';
+  }
+
+  async function syncOpen(){
+    if(!CONFIGURED)return; // no-op until real config is dropped in
+    try{
+      const app=initializeApp(firebaseConfig);
+      const db=getDatabase(app);
+      const deviceId=getDeviceId();
+      const now=Date.now();
+      const pilotRef=ref(db,'pilots/'+deviceId);
+
+      // Read existing first so counters/firstSeen survive a localStorage clear
+      let existing={};
+      try{const snap=await get(pilotRef);existing=snap.val()||{};}catch(e){}
+
+      // Capped rolling list of launch timestamps (last 100) → powers the admin windows
+      const launches=Array.isArray(existing.launches)?existing.launches.slice():[];
+      launches.push(now);
+      const trimmed=launches.slice(-100);
+
+      // Launch counter survives clears via max(local, server)
+      let localCount=0;
+      try{localCount=parseInt(localStorage.getItem('poh_launch_count')||'0');}catch(e){}
+      const launchCount=Math.max(localCount+1,(existing.launchCount||0)+1);
+      try{localStorage.setItem('poh_launch_count',String(launchCount));}catch(e){}
+
+      await set(pilotRef,{
+        firstSeen: existing.firstSeen||now,
+        lastSeen: now,
+        os: getOS(),
+        appVersion: getAppVersion()||existing.appVersion||'',
+        launchCount,
+        launches: trimmed,
+        daily: existing.daily||{}
+      });
+
+      // ── Daily usage bucket (weekday/weekend pattern view — future) ──
+      // Separate, isolated server-side increment. Keyed by LOCAL date
+      // (toLocaleDateString('en-CA') → 'YYYY-MM-DD' in device tz) so an
+      // Israel-evening open lands on the right day, not UTC-tomorrow.
+      // Never use toISOString(). The main set() above carries daily forward
+      // (full-node set would otherwise wipe prior days); this increment then
+      // bumps today. For POH the counted event is app-open (no flight-start).
+      try{
+        const localDay=new Date().toLocaleDateString('en-CA');
+        await set(ref(db,'pilots/'+deviceId+'/daily/'+localDay),increment(1));
+      }catch(e){}
+    }catch(e){}
+  }
+
+  syncOpen();
 </script>
 </body>
 </html>

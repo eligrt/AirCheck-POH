@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirCheck POH · Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4ecdc;--paper-hi:#fbf6e8;--paper-edge:#e3d4ad;
+  --ink:#1c3d6e;--ink-soft:#5a4a3a;--ink-faint:#8a7a5a;
+  --gold:#c8a04a;--gold-deep:#a87c2e;--line:#ddd2bc;
+  --done:#1f6f3f;--red:#c0201f;
+  --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft);min-height:100vh;padding:0 0 40px;}
+.num{font-family:var(--mono);direction:ltr;}
+
+.bar{background:var(--ink);color:var(--paper-hi);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:10;}
+.bar .brand{font-size:16px;font-weight:800;direction:ltr;letter-spacing:.02em;}
+.bar .brand small{font-weight:400;color:rgba(244,236,220,.55);font-size:11px;margin-inline-start:8px;}
+.bar .refresh{font-family:var(--mono);font-size:11px;letter-spacing:.05em;border:1px solid rgba(244,236,220,.4);border-radius:6px;padding:7px 13px;color:rgba(244,236,220,.9);cursor:pointer;background:transparent;}
+.bar .refresh:active{background:rgba(255,255,255,.1);}
+
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 0;}
+
+.status{text-align:center;padding:40px 20px;font-size:14px;color:var(--ink-faint);}
+.status.err{color:var(--red);}
+
+/* metric cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.card{background:var(--paper-hi);border:1px solid var(--paper-edge);border-radius:10px;padding:16px 16px 14px;position:relative;}
+.card .lbl{font-size:11px;letter-spacing:.03em;color:var(--ink-faint);font-weight:600;margin-bottom:8px;}
+.card .big{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--ink);line-height:1;direction:ltr;}
+.card .sub{font-size:11px;color:var(--ink-faint);margin-top:5px;}
+.card.accent{border-color:var(--gold);}
+.card.accent .big{color:var(--gold-deep);}
+
+.section-h{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:.02em;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--paper-edge);display:flex;align-items:center;gap:8px;}
+.section-h::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gold);}
+
+/* rolling windows */
+.windows{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px;}
+.win{background:var(--paper-hi);border:1px solid var(--paper-edge);border-radius:9px;padding:13px 10px;text-align:center;}
+.win .wv{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--ink);direction:ltr;}
+.win .wl{font-size:10.5px;color:var(--ink-faint);margin-top:4px;letter-spacing:.02em;}
+@media(max-width:560px){.windows{grid-template-columns:repeat(2,1fr);}}
+
+/* os split */
+.osbar{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--paper-edge);margin-bottom:8px;}
+.osseg{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono);min-width:0;}
+.osseg.ios{background:var(--ink);}
+.osseg.android{background:var(--done);}
+.osseg.desktop{background:var(--ink-faint);}
+.oslegend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);}
+.oslegend span{display:flex;align-items:center;gap:6px;}
+.oslegend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+/* pilot table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;background:var(--paper-hi);border:1px solid var(--paper-edge);border-radius:10px;overflow:hidden;}
+.tbl th{background:var(--ink);color:var(--paper-hi);padding:10px 8px;font-weight:600;font-size:11px;letter-spacing:.02em;text-align:right;}
+.tbl td{padding:9px 8px;border-bottom:1px solid var(--paper-edge);}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:nth-child(even) td{background:rgba(255,255,255,.4);}
+.tbl .mono{font-family:var(--mono);direction:ltr;font-size:11px;}
+.tbl .os-pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;font-family:var(--mono);}
+.tbl .os-ios{background:rgba(28,61,110,.12);color:var(--ink);}
+.tbl .os-android{background:rgba(31,111,63,.14);color:var(--done);}
+.tbl .os-desktop{background:rgba(138,122,90,.15);color:var(--ink-faint);}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tbl .del{background:transparent;border:1px solid rgba(192,32,31,.35);color:var(--red);width:24px;height:24px;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;padding:0;}
+.tbl .del:active{background:rgba(192,32,31,.12);}
+
+.foot{text-align:center;margin-top:26px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.06em;direction:ltr;}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="brand">AirCheck POH <small>Admin · Analytics</small></div>
+  <button class="refresh" id="refreshBtn" onclick="loadData()">↻ REFRESH</button>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div id="status" class="status">טוען נתונים…</div>
+    <div id="content" style="display:none;">
+
+      <div class="cards">
+        <div class="card accent"><div class="lbl">סה"כ פתיחות</div><div class="big num" id="mTotal">0</div><div class="sub" id="mTotalSub"></div></div>
+        <div class="card"><div class="lbl">מכשירים ייחודיים</div><div class="big num" id="mDevices">0</div><div class="sub">טייסים</div></div>
+        <div class="card"><div class="lbl">פעילים (7 ימים)</div><div class="big num" id="mActive">0</div><div class="sub">מכשירים</div></div>
+        <div class="card"><div class="lbl">חדשים (7 ימים)</div><div class="big num" id="mNew">0</div><div class="sub">מכשירים</div></div>
+      </div>
+
+      <div class="section-h">חלונות זמן מתגלגלים · פתיחות</div>
+      <div class="windows">
+        <div class="win"><div class="wv num" id="w48">0</div><div class="wl">48 שעות</div></div>
+        <div class="win"><div class="wv num" id="wWeek">0</div><div class="wl">שבוע</div></div>
+        <div class="win"><div class="wv num" id="wMonth">0</div><div class="wl">חודש</div></div>
+        <div class="win"><div class="wv num" id="w3mo">0</div><div class="wl">3 חודשים</div></div>
+      </div>
+
+      <div class="section-h">מערכת הפעלה</div>
+      <div class="osbar" id="osbar"></div>
+      <div class="oslegend" id="oslegend"></div>
+
+      <div class="section-h">טייסים · לפי פעילות אחרונה</div>
+      <div class="tblwrap">
+        <table class="tbl">
+          <thead><tr>
+            <th>מזהה מכשיר</th><th>OS</th><th>פתיחות</th><th>ראשון</th><th>אחרון</th><th>גרסה</th><th></th>
+          </tr></thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+
+      <div class="foot" id="foot"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getDatabase, ref, get, remove } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+
+  // ⚠️ SAME config as the one you put in AirCheck_POH.html
+  const firebaseConfig = {
+    apiKey: "AIzaSyCGiKfIKFAsFoWcmeTLQ8WNRfyjwhI6U9Q",
+    authDomain: "aircheck-poh.firebaseapp.com",
+    databaseURL: "https://aircheck-poh-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "aircheck-poh",
+    storageBucket: "aircheck-poh.firebasestorage.app",
+    messagingSenderId: "220461298223",
+    appId: "1:220461298223:web:17d25b447930ac7b7c0cda"
+  };
+  const CONFIGURED = firebaseConfig.apiKey !== "REPLACE_ME";
+
+  let _db=null;
+  function db(){
+    if(!_db){const app=initializeApp(firebaseConfig);_db=getDatabase(app);}
+    return _db;
+  }
+
+  const DAY=86400000;
+  function countSince(launches,ms){
+    if(!Array.isArray(launches))return 0;
+    const cut=Date.now()-ms;
+    return launches.filter(t=>t>=cut).length;
+  }
+  function fmtDate(ts){
+    if(!ts)return'—';
+    const d=new Date(ts);
+    return d.getDate()+'/'+(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2);
+  }
+  function esc(s){return String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+
+  window.delDevice=async function(id){
+    if(!CONFIGURED)return;
+    if(!confirm('למחוק את המכשיר '+id+' לצמיתות?\nהנתונים לא ניתנים לשחזור.'))return;
+    try{
+      await remove(ref(db(),'pilots/'+id));
+      loadData();
+    }catch(e){
+      alert('שגיאה במחיקה: '+(e&&e.message?e.message:e));
+    }
+  };
+
+  window.loadData=async function(){
+    const status=document.getElementById('status');
+    const content=document.getElementById('content');
+    content.style.display='none';
+    status.style.display='';
+    status.className='status';
+    status.textContent='טוען נתונים…';
+
+    if(!CONFIGURED){
+      status.className='status err';
+      status.textContent='⚠ הגדרות Firebase חסרות — החלף את REPLACE_ME בקובץ.';
+      return;
+    }
+    try{
+      const snap=await get(ref(db(),'pilots'));
+      const data=snap.val()||{};
+      const pilots=Object.entries(data).map(([id,p])=>({id,...p}));
+
+      if(!pilots.length){
+        status.className='status';
+        status.textContent='אין עדיין נתונים. פתח את האפליקציה במכשיר כדי לרשום פתיחה ראשונה.';
+        return;
+      }
+
+      // aggregate
+      let total=0,os={iOS:0,Android:0,Desktop:0};
+      let w48=0,wWeek=0,wMonth=0,w3mo=0,active7=0,new7=0;
+      const now=Date.now();
+      pilots.forEach(p=>{
+        total+=p.launchCount||0;
+        const o=p.os||'Desktop'; if(os[o]===undefined)os[o]=0; os[o]++;
+        w48+=countSince(p.launches,2*DAY);
+        wWeek+=countSince(p.launches,7*DAY);
+        wMonth+=countSince(p.launches,30*DAY);
+        w3mo+=countSince(p.launches,90*DAY);
+        if(p.lastSeen&&p.lastSeen>=now-7*DAY)active7++;
+        if(p.firstSeen&&p.firstSeen>=now-7*DAY)new7++;
+      });
+
+      document.getElementById('mTotal').textContent=total.toLocaleString();
+      document.getElementById('mTotalSub').textContent='מכל הזמנים';
+      document.getElementById('mDevices').textContent=pilots.length;
+      document.getElementById('mActive').textContent=active7;
+      document.getElementById('mNew').textContent=new7;
+      document.getElementById('w48').textContent=w48;
+      document.getElementById('wWeek').textContent=wWeek;
+      document.getElementById('wMonth').textContent=wMonth;
+      document.getElementById('w3mo').textContent=w3mo;
+
+      // os bar
+      const osTotal=pilots.length||1;
+      const osbar=document.getElementById('osbar');
+      const oslegend=document.getElementById('oslegend');
+      osbar.innerHTML='';oslegend.innerHTML='';
+      const osMap=[['iOS','ios',os.iOS||0],['Android','android',os.Android||0],['Desktop','desktop',os.Desktop||0]];
+      const colorMap={ios:'var(--ink)',android:'var(--done)',desktop:'var(--ink-faint)'};
+      osMap.forEach(([label,cls,n])=>{
+        if(n>0){
+          const pct=(n/osTotal*100);
+          const seg=document.createElement('div');
+          seg.className='osseg '+cls;seg.style.width=pct+'%';
+          seg.textContent=pct>=12?Math.round(pct)+'%':'';
+          osbar.appendChild(seg);
+        }
+        const l=document.createElement('span');
+        l.innerHTML='<i style="background:'+colorMap[cls]+'"></i>'+label+' · '+n;
+        oslegend.appendChild(l);
+      });
+
+      // table — sort by lastSeen desc
+      pilots.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
+      const body=document.getElementById('tblBody');
+      body.innerHTML=pilots.map(p=>{
+        const o=(p.os||'Desktop').toLowerCase();
+        const oc=o==='ios'?'os-ios':o==='android'?'os-android':'os-desktop';
+        const olabel=p.os||'Desktop';
+        return '<tr>'
+          +'<td class="mono">'+esc(p.id)+'</td>'
+          +'<td><span class="os-pill '+oc+'">'+esc(olabel)+'</span></td>'
+          +'<td class="mono">'+(p.launchCount||0)+'</td>'
+          +'<td class="mono">'+fmtDate(p.firstSeen)+'</td>'
+          +'<td class="mono">'+fmtDate(p.lastSeen)+'</td>'
+          +'<td class="mono">'+esc(p.appVersion||'—')+'</td>'
+          +'<td><button class="del" onclick="delDevice(\''+esc(p.id)+'\')" title="מחק מכשיר">✕</button></td>'
+          +'</tr>';
+      }).join('');
+
+      document.getElementById('foot').textContent='עודכן '+new Date().toLocaleString('he-IL')+' · '+pilots.length+' devices';
+
+      status.style.display='none';
+      content.style.display='';
+    }catch(e){
+      status.className='status err';
+      status.textContent='שגיאה בטעינה: '+(e&&e.message?e.message:e);
+    }
+  };
+</script>
+</body>
+</html>
