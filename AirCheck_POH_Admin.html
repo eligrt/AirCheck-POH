@@ -14,18 +14,23 @@
   --mono:'IBM Plex Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft);min-height:100vh;padding:0 0 40px;}
+html,body{height:100%;}
+body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft);height:100svh;overflow:hidden;display:flex;flex-direction:column;}
+/* wide screens: float the page as a centered frame on dark, matching the app + satellite pages */
+@media(min-width:600px){
+  html{background:#1a1a1c;}
+  body{max-width:430px;margin:0 auto;border-left:2px solid var(--gold);border-right:2px solid var(--gold);box-shadow:0 0 60px rgba(0,0,0,.6);}
+}
 .num{font-family:var(--mono);direction:ltr;}
 
-.bar{background:var(--ink);color:var(--paper-hi);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:10;}
+.bar{background:var(--ink);color:var(--paper-hi);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);flex-shrink:0;z-index:10;}
 .bar .brand{font-size:16px;font-weight:800;direction:ltr;letter-spacing:.02em;}
 .bar .brand small{font-weight:400;color:rgba(244,236,220,.55);font-size:11px;margin-inline-start:8px;}
-.bar .refresh{font-family:var(--mono);font-size:11px;letter-spacing:.05em;border:1px solid rgba(244,236,220,.4);border-radius:6px;padding:7px 13px;color:rgba(244,236,220,.9);cursor:pointer;background:transparent;}
-.bar .refresh:active{background:rgba(255,255,255,.1);}
-.bar-right{display:flex;align-items:center;gap:12px;}
-.bar-updated{font-family:var(--mono);font-size:9.5px;color:rgba(244,236,220,.55);letter-spacing:.04em;white-space:nowrap;direction:rtl;}
 
-.wrap{max-width:900px;margin:0 auto;padding:20px 16px 0;}
+#app{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;}
+#app::-webkit-scrollbar{display:none;}
+#app{scrollbar-width:none;}
+.wrap{padding:20px 16px 28px;}
 
 .status{text-align:center;padding:40px 20px;font-size:14px;color:var(--ink-faint);}
 .status.err{color:var(--red);}
@@ -82,17 +87,15 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 .tbl .del{background:transparent;border:1px solid rgba(192,32,31,.35);color:var(--red);width:24px;height:24px;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;padding:0;}
 .tbl .del:active{background:rgba(192,32,31,.12);}
 
-.appfooter{position:relative;display:flex;align-items:center;justify-content:center;margin-top:26px;padding:8px 14px 10px;border-top:1px solid var(--paper-edge);}
-.foot-brand{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+.appfooter{position:relative;flex-shrink:0;display:flex;align-items:center;padding:7px 14px 9px;border-top:1px solid var(--gold-deep);background:var(--paper-hi);}
+.foot-updated{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.04em;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.foot-updated:active{opacity:.55;}
+.foot-brand{position:absolute;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
 </style>
 </head>
 <body>
 <div class="bar">
   <div class="brand">AirCheck POH <small>Admin · Analytics</small></div>
-  <div class="bar-right">
-    <span class="bar-updated" id="foot">—</span>
-    <button class="refresh" id="refreshBtn" onclick="loadData()">↻ REFRESH</button>
-  </div>
 </div>
 
 <div id="app">
@@ -132,11 +135,13 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
         </table>
       </div>
 
-      <div class="appfooter" dir="ltr">
-        <span class="foot-brand">AirCheck POH · Admin · v1.02 · built by eligrt</span>
-      </div>
     </div>
   </div>
+</div>
+
+<div class="appfooter" dir="ltr">
+  <span class="foot-updated" id="foot" onclick="loadData()" title="רענן">↻ —</span>
+  <span class="foot-brand">AirCheck POH · Admin · v1.03 · built by eligrt</span>
 </div>
 
 <script type="module">
@@ -274,7 +279,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 
       const _t=new Date();
       const _hhmm=String(_t.getHours()).padStart(2,'0')+':'+String(_t.getMinutes()).padStart(2,'0');
-      document.getElementById('foot').textContent='עודכן '+_hhmm;
+      document.getElementById('foot').textContent='↻ עודכן '+_hhmm;
 
       status.style.display='none';
       content.style.display='';
