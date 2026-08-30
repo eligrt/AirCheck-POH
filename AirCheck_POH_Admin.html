@@ -22,6 +22,8 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 .bar .brand small{font-weight:400;color:rgba(244,236,220,.55);font-size:11px;margin-inline-start:8px;}
 .bar .refresh{font-family:var(--mono);font-size:11px;letter-spacing:.05em;border:1px solid rgba(244,236,220,.4);border-radius:6px;padding:7px 13px;color:rgba(244,236,220,.9);cursor:pointer;background:transparent;}
 .bar .refresh:active{background:rgba(255,255,255,.1);}
+.bar-right{display:flex;align-items:center;gap:12px;}
+.bar-updated{font-family:var(--mono);font-size:9.5px;color:rgba(244,236,220,.55);letter-spacing:.04em;white-space:nowrap;direction:rtl;}
 
 .wrap{max-width:900px;margin:0 auto;padding:20px 16px 0;}
 
@@ -58,12 +60,20 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 .oslegend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
 
 /* pilot table */
-.tbl{width:100%;border-collapse:collapse;font-size:12px;background:var(--paper-hi);border:1px solid var(--paper-edge);border-radius:10px;overflow:hidden;}
-.tbl th{background:var(--ink);color:var(--paper-hi);padding:10px 8px;font-weight:600;font-size:11px;letter-spacing:.02em;text-align:right;}
-.tbl td{padding:9px 8px;border-bottom:1px solid var(--paper-edge);}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;background:var(--paper-hi);border:1px solid var(--paper-edge);border-radius:10px;overflow:hidden;table-layout:fixed;}
+.tbl th{background:var(--ink);color:var(--paper-hi);padding:10px 8px;font-weight:600;font-size:11px;letter-spacing:.02em;text-align:right;white-space:nowrap;}
+.tbl td{padding:9px 8px;border-bottom:1px solid var(--paper-edge);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tbl tr:last-child td{border-bottom:none;}
 .tbl tr:nth-child(even) td{background:rgba(255,255,255,.4);}
-.tbl .mono{font-family:var(--mono);direction:ltr;font-size:11px;}
+.tbl .mono{font-family:var(--mono);direction:ltr;font-size:11px;text-align:right;unicode-bidi:plaintext;}
+/* fixed column widths keep header + body locked together */
+.tbl col.c-id{width:24%;}
+.tbl col.c-os{width:16%;}
+.tbl col.c-num{width:13%;}
+.tbl col.c-date{width:14%;}
+.tbl col.c-ver{width:15%;}
+.tbl col.c-del{width:9%;}
+.tbl th.center,.tbl td.center{text-align:center;}
 .tbl .os-pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;font-family:var(--mono);}
 .tbl .os-ios{background:rgba(28,61,110,.12);color:var(--ink);}
 .tbl .os-android{background:rgba(31,111,63,.14);color:var(--done);}
@@ -72,13 +82,17 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 .tbl .del{background:transparent;border:1px solid rgba(192,32,31,.35);color:var(--red);width:24px;height:24px;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;padding:0;}
 .tbl .del:active{background:rgba(192,32,31,.12);}
 
-.foot{text-align:center;margin-top:26px;font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.06em;direction:ltr;}
+.appfooter{position:relative;display:flex;align-items:center;justify-content:center;margin-top:26px;padding:8px 14px 10px;border-top:1px solid var(--paper-edge);}
+.foot-brand{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
 </style>
 </head>
 <body>
 <div class="bar">
   <div class="brand">AirCheck POH <small>Admin · Analytics</small></div>
-  <button class="refresh" id="refreshBtn" onclick="loadData()">↻ REFRESH</button>
+  <div class="bar-right">
+    <span class="bar-updated" id="foot">—</span>
+    <button class="refresh" id="refreshBtn" onclick="loadData()">↻ REFRESH</button>
+  </div>
 </div>
 
 <div id="app">
@@ -108,14 +122,19 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       <div class="section-h">טייסים · לפי פעילות אחרונה</div>
       <div class="tblwrap">
         <table class="tbl">
+          <colgroup>
+            <col class="c-id"><col class="c-os"><col class="c-num"><col class="c-date"><col class="c-date"><col class="c-ver"><col class="c-del">
+          </colgroup>
           <thead><tr>
-            <th>מזהה מכשיר</th><th>OS</th><th>פתיחות</th><th>ראשון</th><th>אחרון</th><th>גרסה</th><th></th>
+            <th>מזהה מכשיר</th><th class="center">OS</th><th class="center">פתיחות</th><th>ראשון</th><th>אחרון</th><th>גרסה</th><th></th>
           </tr></thead>
           <tbody id="tblBody"></tbody>
         </table>
       </div>
 
-      <div class="foot" id="foot"></div>
+      <div class="appfooter" dir="ltr">
+        <span class="foot-brand">AirCheck POH · Admin · v1.02 · built by eligrt</span>
+      </div>
     </div>
   </div>
 </div>
@@ -244,16 +263,18 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
         const olabel=p.os||'Desktop';
         return '<tr>'
           +'<td class="mono">'+esc(p.id)+'</td>'
-          +'<td><span class="os-pill '+oc+'">'+esc(olabel)+'</span></td>'
-          +'<td class="mono">'+(p.launchCount||0)+'</td>'
+          +'<td class="center"><span class="os-pill '+oc+'">'+esc(olabel)+'</span></td>'
+          +'<td class="mono center">'+(p.launchCount||0)+'</td>'
           +'<td class="mono">'+fmtDate(p.firstSeen)+'</td>'
           +'<td class="mono">'+fmtDate(p.lastSeen)+'</td>'
           +'<td class="mono">'+esc(p.appVersion||'—')+'</td>'
-          +'<td><button class="del" onclick="delDevice(\''+esc(p.id)+'\')" title="מחק מכשיר">✕</button></td>'
+          +'<td class="center"><button class="del" onclick="delDevice(\''+esc(p.id)+'\')" title="מחק מכשיר">✕</button></td>'
           +'</tr>';
       }).join('');
 
-      document.getElementById('foot').textContent='עודכן '+new Date().toLocaleString('he-IL')+' · '+pilots.length+' devices';
+      const _t=new Date();
+      const _hhmm=String(_t.getHours()).padStart(2,'0')+':'+String(_t.getMinutes()).padStart(2,'0');
+      document.getElementById('foot').textContent='עודכן '+_hhmm;
 
       status.style.display='none';
       content.style.display='';
@@ -262,6 +283,9 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       status.textContent='שגיאה בטעינה: '+(e&&e.message?e.message:e);
     }
   };
+
+  // Load immediately on page open (not only when Refresh is tapped)
+  loadData();
 </script>
 </body>
 </html>
