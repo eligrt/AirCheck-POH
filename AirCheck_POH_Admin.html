@@ -141,7 +141,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 
 <div class="appfooter" dir="ltr">
   <span class="foot-updated" id="foot" onclick="loadData()" title="רענן">↻ —</span>
-  <span class="foot-brand">AirCheck POH · Admin · v1.03 · built by eligrt</span>
+  <span class="foot-brand">AirCheck POH · Admin · v1.04 · built by eligrt</span>
 </div>
 
 <script type="module">
@@ -279,7 +279,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 
       const _t=new Date();
       const _hhmm=String(_t.getHours()).padStart(2,'0')+':'+String(_t.getMinutes()).padStart(2,'0');
-      document.getElementById('foot').textContent='↻ עודכן '+_hhmm;
+      document.getElementById('foot').textContent='↻ '+_hhmm;
 
       status.style.display='none';
       content.style.display='';
