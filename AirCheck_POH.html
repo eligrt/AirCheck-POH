@@ -198,7 +198,9 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .welcome .wbd .lead{font-weight:700;color:var(--ink);font-size:14.5px;display:block;margin-bottom:8px;}
 .welcome .wbd .pic{font-weight:700;color:var(--ink);}
 .welcome .wbd .note{display:block;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-faint);line-height:1.6;}
-.welcome .wbd .note a{color:var(--gold-deep);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;font-weight:600;}
+.welcome .wbd .note a{color:var(--gold-deep);font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;text-decoration:none;}
+.welcome .wbd .note a span{text-decoration:underline;text-underline-offset:3px;}
+.welcome .wbd .note a .mailico{flex:none;vertical-align:middle;}
 .welcome .wbd .sign{display:block;margin-top:12px;text-align:center;font-weight:700;color:var(--green-strong);font-size:14px;}
 .welcome .wbtn{padding:0 20px 20px;}
 .welcome .wbtn button{width:100%;padding:13px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:'Heebo';background:var(--ink);color:#f4ecdc;}
@@ -305,9 +307,9 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.028 · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.030 · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
-    <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">האפליקציה נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש "בקליק".</span>היא גרסת אונליין של הבדּ"ח, אך אינה מחליפה את הבדּ"ח הרשמי שבמטוס.<br><span class="pic">כטייס מפקד (PIC) תמיד תוודא מול הבדּ"ח הרשמי.</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com">אשמח אם תעדכן</a>.</span><span class="sign">טיסה טובה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
+    <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה טובה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
   const l=document.getElementById('list'),r=document.getElementById('rail');
   if(keepList&&l)l.scrollTop=ls;
