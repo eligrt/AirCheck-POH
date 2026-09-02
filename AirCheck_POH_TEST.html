@@ -152,6 +152,20 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .row .val.num{font-family:var(--mono);direction:ltr;font-weight:500;}
 .row.done .tx{text-decoration:line-through;opacity:.45;}
 .row.done .val{opacity:.4;}
+/* ── current-item highlight (green tint, no edge bar) ── */
+.row.cur{background:rgba(31,111,63,.12);}
+/* ── run bar (big advance button) ── */
+.runbar{flex-shrink:0;padding:8px 12px 10px;background:var(--paper-hi);border-top:1px solid var(--line);}
+.runbtn{width:100%;border:none;border-radius:12px;padding:15px;font-family:'Heebo',sans-serif;font-size:16px;font-weight:800;color:#fff;background:var(--done);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;transition:background .15s;}
+.tablet .runbtn{font-size:17px;padding:16px;}
+.runbtn:active{filter:brightness(.94);}
+.runbtn .rbadge{display:inline-flex;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);align-items:center;justify-content:center;flex-shrink:0;}
+.runbtn .rbadge svg{width:14px;height:14px;stroke:#fff;stroke-width:3;fill:none;}
+.runbtn[data-act="next"]{background:var(--ink);}
+.runbtn[data-act="done"]{background:var(--green-txt);}
+.runbtn[data-act="done"] .rbadge{background:var(--done);}
+.runbtn[data-act="done"] .rbadge svg{stroke-width:3.5;}
+.runbtn .rlbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .row.ro{cursor:default;}
 .hdr{display:flex;align-items:center;gap:12px;padding:14px 14px 6px;background:none;border-bottom:none;}
@@ -241,6 +255,26 @@ let activeSection=lastSection['white'];
 const ticked={};
 const key=(sid,i)=>sid+':'+i;
 const CHK='<svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>';
+// run-button badge glyphs: down-chevron (advance), back-chevron (next section), check (done)
+const CHEV_DOWN='<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+const CHEV_BACK='<svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>';
+let curIdx=-1;  // highlighted row index within active section (-1 = none)
+// first un-ticked item index in a section, or -1 if none/readonly
+function firstUndone(s,from){
+  if(!s||s.readonly)return -1;
+  from=from||0;
+  for(let i=from;i<s.rows.length;i++){if(s.rows[i].type==='item'&&!ticked[key(s.id,i)])return i;}
+  for(let i=0;i<s.rows.length;i++){if(s.rows[i].type==='item'&&!ticked[key(s.id,i)])return i;}
+  return -1;
+}
+// next section in the SAME category after the active one (for the "offer" state), or null
+function nextSectionSameCat(){
+  const s=sections[activeSection];
+  const secs=sections.filter(x=>x.cat===s.cat);
+  const pos=secs.findIndex(x=>x.id===s.id);
+  return (pos>=0&&pos<secs.length-1)?secs[pos+1]:null;
+}
+function resetCur(){curIdx=firstUndone(sections[activeSection],0);}
 
 function colorbarHTML(){
   return CAT_ORDER.map(c=>{
@@ -276,8 +310,9 @@ function listHTML(){
         h+=`<div class="row ro"><div class="tx">${r.item||''}</div>${lead}${v}</div>`;
       } else {
         const d=ticked[key(s.id,idx)]?'done':'';
+        const cc=idx===curIdx?' cur':'';
         const lead = r.val?'<span class="leader"></span>':'';
-        h+=`<div class="row ${d}" data-idx="${idx}" onclick="tick(${idx})"><div class="box">${CHK}</div><div class="tx">${r.item||''}</div>${lead}${v}</div>`;
+        h+=`<div class="row ${d}${cc}" data-idx="${idx}" onclick="tick(${idx})"><div class="box">${CHK}</div><div class="tx">${r.item||''}</div>${lead}${v}</div>`;
       }
     } else if(r.type==='header'){h+=`<div class="hdr"><span class="hln"></span><span class="htx">${r.sub}</span><span class="hln"></span></div>`;}
     else if(r.type==='note'){h+=`<div class="callout note">${bulletize(r.sub)}</div>`;}
@@ -291,7 +326,30 @@ function paneHTML(){
   const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
   return `<div class="pane-hd"><div class="ptitle">${s.sec}</div>${showCtl?`<div class="pcount num">${done}/${s.itemCount}</div>`:''}${showCtl?`<button class="clear-sec" onclick="clearSection(event)">בטל סימונים</button>`:''}</div>
     <div class="list" id="list" onscroll="onListScroll()">${listHTML()}</div>
-    <div class="cue listcue" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>`;
+    <div class="cue listcue" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+    ${showCtl?runbarHTML():''}`;
+}
+// Build the run button reflecting current state: tick / next / done
+function runbarState(){
+  const s=sections[activeSection];
+  const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
+  const allDone=done>=s.itemCount;
+  if(!allDone)return {act:'tick',badge:CHEV_DOWN,label:'סמן והמשך'};
+  const nx=nextSectionSameCat();
+  if(nx)return {act:'next',badge:CHEV_BACK,label:'המשך: '+nx.sec};
+  return {act:'done',badge:CHK,label:'הסעיף הושלם'};
+}
+function runbarHTML(){
+  const st=runbarState();
+  return `<div class="runbar"><button class="runbtn" data-act="${st.act}" onclick="runAdvance()"><span class="rbadge">${st.badge}</span><span class="rlbl">${st.label}</span></button></div>`;
+}
+// Refresh just the run button in place (no full re-render)
+function updateRunbar(){
+  const btn=document.querySelector('.runbtn');if(!btn)return;
+  const st=runbarState();
+  btn.setAttribute('data-act',st.act);
+  btn.querySelector('.rbadge').innerHTML=st.badge;
+  btn.querySelector('.rlbl').textContent=st.label;
 }
 function render(opts){
   opts=opts||{};
@@ -313,7 +371,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.034T · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.036T · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -325,14 +383,22 @@ function render(opts){
 function onResize(){const d=detectDevice();if(d!==device){device=d;render({both:true});}}
 window.addEventListener('resize',onResize);
 window.addEventListener('orientationchange',onResize);
-function pickCat(c){activeCat=c;activeSection=lastSection[c];render();}
-function go(id){activeSection=id;lastSection[activeCat]=id;render({rail:true});}
+function pickCat(c){activeCat=c;activeSection=lastSection[c];resetCur();render();}
+function go(id){activeSection=id;lastSection[activeCat]=id;resetCur();render({rail:true});}
 function tick(i){
   const s=sections[activeSection];const k=key(s.id,i);
-  if(ticked[k])delete ticked[k];else ticked[k]=true;
+  const nowTicked=!ticked[k];
+  if(nowTicked)ticked[k]=true;else delete ticked[k];
   const domRow=document.querySelector(`#list .row[data-idx="${i}"]`);
-  if(domRow)domRow.classList.toggle('done', !!ticked[k]);
-  updateCounter();updateDots();
+  if(domRow)domRow.classList.toggle('done', nowTicked);
+  if(nowTicked){
+    // advance highlight to next open item (skip if we ticked something behind the cursor)
+    if(i===curIdx)setCur(firstUndone(s,i+1),true);
+  }else{
+    // un-tick jumps the highlight back to that row (redo intent)
+    setCur(i,false);
+  }
+  updateCounter();updateDots();updateRunbar();
 }
 function updateCounter(){
   const s=sections[activeSection];
@@ -355,10 +421,43 @@ function updateDots(){
     else if(!has&&m){m.remove();}
   });
 }
-function clearSection(e){if(e)e.stopPropagation();const s=sections[activeSection];s.rows.forEach((r,i)=>delete ticked[key(s.id,i)]);render({both:true});}
+// Move the highlight to index ni (in-place DOM swap of .cur), optionally scroll into view
+function setCur(ni,scroll){
+  if(ni===curIdx)return;
+  const prev=document.querySelector('#list .row.cur');if(prev)prev.classList.remove('cur');
+  curIdx=ni;
+  if(ni<0)return;
+  const el=document.querySelector(`#list .row[data-idx="${ni}"]`);
+  if(el){el.classList.add('cur');if(scroll&&el.scrollIntoView)el.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+// Big-button press: behaviour depends on run-state (tick / next / done)
+function runAdvance(){
+  const st=runbarState();
+  if(st.act==='tick'){
+    const s=sections[activeSection];
+    let i=curIdx;
+    if(i<0||i>=s.rows.length||s.rows[i].type!=='item'||ticked[key(s.id,i)])i=firstUndone(s,0);
+    if(i<0)return;
+    ticked[key(s.id,i)]=true;
+    const row=document.querySelector(`#list .row[data-idx="${i}"]`);
+    if(row)row.classList.add('done');
+    const ni=firstUndone(s,i+1);
+    setCur(ni,true);
+    updateCounter();updateDots();updateRunbar();
+  } else if(st.act==='next'){
+    const nx=nextSectionSameCat();
+    if(!nx)return;
+    activeSection=nx.id;lastSection[activeCat]=nx.id;
+    resetCur();
+    render({rail:true});
+    const l=document.getElementById('list');if(l)l.scrollTop=0;
+  }
+  // act==='done' → no-op (section complete, stop)
+}
+function clearSection(e){if(e)e.stopPropagation();const s=sections[activeSection];s.rows.forEach((r,i)=>delete ticked[key(s.id,i)]);resetCur();render({both:true});}
 function askNF(){document.getElementById('confirm').classList.add('show');}
 function closeNF(){document.getElementById('confirm').classList.remove('show');}
-function doNF(){for(const k in ticked)delete ticked[k];closeNF();render();}
+function doNF(){for(const k in ticked)delete ticked[k];resetCur();closeNF();render();}
 function onListScroll(){const l=document.getElementById('list'),c=document.getElementById('listcue');if(!l||!c)return;c.classList.toggle('show',l.scrollHeight-l.clientHeight-l.scrollTop>24);}
 function scrollList(){const l=document.getElementById('list');if(l)l.scrollBy({top:l.clientHeight*0.8,behavior:'smooth'});}
 function scrollRail(){const r=document.getElementById('rail');if(r)r.scrollBy({top:r.clientHeight*0.8,behavior:'smooth'});}
@@ -381,6 +480,7 @@ function resetWelcome(){
   document.getElementById('welcome').classList.add('show');
 }
 
+resetCur();
 render();
 maybeShowWelcome();
 </script>
