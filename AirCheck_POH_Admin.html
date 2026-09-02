@@ -86,6 +86,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .tbl .del{background:transparent;border:1px solid rgba(192,32,31,.35);color:var(--red);width:24px;height:24px;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;padding:0;}
 .tbl .del:active{background:rgba(192,32,31,.12);}
+.tvmnote{font-size:10px;color:var(--ink-faint);margin:2px 2px 4px;line-height:1.5;text-align:right;}
 
 .appfooter{position:relative;flex-shrink:0;display:flex;align-items:center;padding:7px 14px 9px;border-top:1px solid var(--gold-deep);background:var(--paper-hi);}
 .foot-updated{font-family:var(--mono);font-size:9px;color:var(--ink-faint);letter-spacing:.04em;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -118,6 +119,13 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
         <div class="win"><div class="wv num" id="w3mo">0</div><div class="wl">3 חודשים</div></div>
       </div>
 
+      <div class="section-h">גרסה · טסט מול ראשית</div>
+      <div class="cards" style="margin-bottom:8px;">
+        <div class="card"><div class="lbl">פתיחות · ראשית</div><div class="big num" id="mMainL">0</div><div class="sub" id="mMainD">0 מכשירים</div></div>
+        <div class="card"><div class="lbl">פתיחות · טסט</div><div class="big num" id="mTestL">0</div><div class="sub" id="mTestD">0 מכשירים</div></div>
+      </div>
+      <div class="tvmnote" id="tvmnote"></div>
+
       <div class="section-h">מערכת הפעלה</div>
       <div class="osbar" id="osbar"></div>
       <div class="oslegend" id="oslegend"></div>
@@ -141,7 +149,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 
 <div class="appfooter" dir="ltr">
   <span class="foot-updated" id="foot" onclick="loadData()" title="רענן">↻ —</span>
-  <span class="foot-brand">AirCheck POH · Admin · v1.04 · built by eligrt</span>
+  <span class="foot-brand">AirCheck POH · Admin · v1.05 · built by eligrt</span>
 </div>
 
 <script type="module">
@@ -217,6 +225,8 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       // aggregate
       let total=0,os={iOS:0,Android:0,Desktop:0};
       let w48=0,wWeek=0,wMonth=0,w3mo=0,active7=0,new7=0;
+      let testL=0,testD=0,mainL=0,mainD=0;
+      const isTest=v=>/[A-Za-z]$/.test((v||'').trim());
       const now=Date.now();
       pilots.forEach(p=>{
         total+=p.launchCount||0;
@@ -227,6 +237,8 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
         w3mo+=countSince(p.launches,90*DAY);
         if(p.lastSeen&&p.lastSeen>=now-7*DAY)active7++;
         if(p.firstSeen&&p.firstSeen>=now-7*DAY)new7++;
+        if(isTest(p.appVersion)){testL+=p.launchCount||0;testD++;}
+        else{mainL+=p.launchCount||0;mainD++;}
       });
 
       document.getElementById('mTotal').textContent=total.toLocaleString();
@@ -238,6 +250,12 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       document.getElementById('wWeek').textContent=wWeek;
       document.getElementById('wMonth').textContent=wMonth;
       document.getElementById('w3mo').textContent=w3mo;
+
+      document.getElementById('mMainL').textContent=mainL.toLocaleString();
+      document.getElementById('mMainD').textContent=mainD+' מכשירים';
+      document.getElementById('mTestL').textContent=testL.toLocaleString();
+      document.getElementById('mTestD').textContent=testD+' מכשירים';
+      document.getElementById('tvmnote').textContent='טסט = גרסה עם סיומת אות (T). הפתיחות משויכות לפי הגרסה האחרונה של כל מכשיר.';
 
       // os bar
       const osTotal=pilots.length||1;
