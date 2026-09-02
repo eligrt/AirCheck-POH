@@ -313,7 +313,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.032 · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.033 · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -423,7 +423,7 @@ maybeShowWelcome();
   function getAppVersion(){
     const el=document.querySelector('.appfooter');
     if(!el)return'';
-    const m=el.textContent.match(/v\d+\.\d+\.\d+/);
+    const m=el.textContent.match(/v\d+\.\d+\.\d+[A-Za-z]?/);
     return m?m[0]:'';
   }
 
