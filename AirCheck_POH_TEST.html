@@ -313,7 +313,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.033T · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.034T · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -440,9 +440,13 @@ maybeShowWelcome();
       let existing={};
       try{const snap=await get(pilotRef);existing=snap.val()||{};}catch(e){}
 
-      // Capped rolling list of launch timestamps (last 100) → powers the admin windows
+      // Capped rolling list of launches (last 100) → powers admin windows + test/main split.
+      // Each entry is {t:timestamp, v:version}. Older entries may be bare numbers (pre-v1.01.034);
+      // the admin tolerates both. Tagging per-launch means switching test↔prod no longer
+      // retroactively re-labels a device's history.
+      const ver=getAppVersion()||existing.appVersion||'';
       const launches=Array.isArray(existing.launches)?existing.launches.slice():[];
-      launches.push(now);
+      launches.push({t:now,v:ver});
       const trimmed=launches.slice(-100);
 
       // Launch counter survives clears via max(local, server)
@@ -455,7 +459,7 @@ maybeShowWelcome();
         firstSeen: existing.firstSeen||now,
         lastSeen: now,
         os: getOS(),
-        appVersion: getAppVersion()||existing.appVersion||'',
+        appVersion: ver||existing.appVersion||'',
         launchCount,
         launches: trimmed,
         daily: existing.daily||{}
