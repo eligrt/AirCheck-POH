@@ -149,7 +149,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
 
 <div class="appfooter" dir="ltr">
   <span class="foot-updated" id="foot" onclick="loadData()" title="רענן">↻ —</span>
-  <span class="foot-brand">AirCheck POH · Admin · v1.05 · built by eligrt</span>
+  <span class="foot-brand">AirCheck POH · Admin · v1.06 · built by eligrt</span>
 </div>
 
 <script type="module">
@@ -175,10 +175,14 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
   }
 
   const DAY=86400000;
+  // launch entries may be {t,v} (v1.01.034+) or bare timestamps (older) — normalize
+  function entryT(e){return typeof e==='object'&&e?e.t:e;}
+  function entryV(e){return typeof e==='object'&&e?(e.v||''):'';}
+  function isTestVer(v){return /[A-Za-z]$/.test((v||'').trim());}
   function countSince(launches,ms){
     if(!Array.isArray(launches))return 0;
     const cut=Date.now()-ms;
-    return launches.filter(t=>t>=cut).length;
+    return launches.filter(e=>entryT(e)>=cut).length;
   }
   function fmtDate(ts){
     if(!ts)return'—';
@@ -225,8 +229,9 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       // aggregate
       let total=0,os={iOS:0,Android:0,Desktop:0};
       let w48=0,wWeek=0,wMonth=0,w3mo=0,active7=0,new7=0;
-      let testL=0,testD=0,mainL=0,mainD=0;
-      const isTest=v=>/[A-Za-z]$/.test((v||'').trim());
+      let testL=0,mainL=0;
+      const testDevs=new Set(),mainDevs=new Set();
+      const isTest=v=>isTestVer(v);
       const now=Date.now();
       pilots.forEach(p=>{
         total+=p.launchCount||0;
@@ -237,8 +242,14 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
         w3mo+=countSince(p.launches,90*DAY);
         if(p.lastSeen&&p.lastSeen>=now-7*DAY)active7++;
         if(p.firstSeen&&p.firstSeen>=now-7*DAY)new7++;
-        if(isTest(p.appVersion)){testL+=p.launchCount||0;testD++;}
-        else{mainL+=p.launchCount||0;mainD++;}
+        // per-launch test/main split (falls back to device appVersion for old bare entries)
+        if(Array.isArray(p.launches)&&p.launches.length){
+          p.launches.forEach(e=>{
+            const v=entryV(e)||p.appVersion||'';
+            if(isTest(v)){testL++;testDevs.add(p.id);}
+            else{mainL++;mainDevs.add(p.id);}
+          });
+        }
       });
 
       document.getElementById('mTotal').textContent=total.toLocaleString();
@@ -252,10 +263,10 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:var(--ink-soft
       document.getElementById('w3mo').textContent=w3mo;
 
       document.getElementById('mMainL').textContent=mainL.toLocaleString();
-      document.getElementById('mMainD').textContent=mainD+' מכשירים';
+      document.getElementById('mMainD').textContent=mainDevs.size+' מכשירים';
       document.getElementById('mTestL').textContent=testL.toLocaleString();
-      document.getElementById('mTestD').textContent=testD+' מכשירים';
-      document.getElementById('tvmnote').textContent='טסט = גרסה עם סיומת אות (T). הפתיחות משויכות לפי הגרסה האחרונה של כל מכשיר.';
+      document.getElementById('mTestD').textContent=testDevs.size+' מכשירים';
+      document.getElementById('tvmnote').textContent='טסט = גרסה עם סיומת אות (T). ספירה לפי כל פתיחה בנפרד (עד 100 אחרונות למכשיר). מכשיר שהשתמש בשתי הגרסאות נספר בשתיהן.';
 
       // os bar
       const osTotal=pilots.length||1;
