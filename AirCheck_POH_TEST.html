@@ -127,7 +127,9 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .p-yellow .clear-sec{color:#5c4700;border-color:rgba(92,71,0,.4);}
 .p-green .clear-sec{color:var(--green-txt);border-color:rgba(19,74,44,.4);}
 
-.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+/* zoom-proof all tappable controls on iOS (double-tap zoom) */
+button,[onclick]{touch-action:manipulation;}
 
 .row{display:flex;align-items:center;gap:11px;padding:15px 14px;border-bottom:1px solid rgba(0,0,0,.045);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 .tablet .row{padding:19px 16px;gap:13px;}
@@ -168,7 +170,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .runbtn .rlbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .row.ro{cursor:default;}
-.hdr{display:flex;align-items:center;gap:12px;padding:14px 14px 6px;background:none;border-bottom:none;}
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 14px 6px;background:none;border-bottom:none;touch-action:manipulation;}
 .hdr .htx{font-size:13.5px;font-weight:700;letter-spacing:.02em;text-align:center;line-height:1.35;white-space:normal;overflow-wrap:break-word;text-decoration:underline;text-decoration-color:var(--gold-deep);text-underline-offset:4px;text-decoration-thickness:1.5px;}
 .hdr .hln{flex:1 1 12px;min-width:8px;height:1px;background:var(--line);}
 .p-white .hdr .htx{color:var(--ink);}
@@ -176,7 +178,7 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 .p-yellow .hdr .htx{color:#5c4700;}
 .p-green .hdr .htx{color:var(--green-txt);}
 
-.callout{margin:10px 14px;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;}
+.callout{margin:10px 14px;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;touch-action:manipulation;}
 .callout.note{background:#fff8e0;border:1px solid #d4a900;color:#4a3800;}
 .callout.warning{background:#fff;border:2px solid var(--red-strong);color:#7a1210;font-weight:600;}
 .callout .ttl{font-weight:800;display:block;margin-bottom:3px;}
@@ -192,6 +194,8 @@ body{background:var(--paper);font-family:'Heebo',sans-serif;color:#e8e0cf;}
 @keyframes cuebob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(4px)}}
 @media(prefers-reduced-motion:reduce){.cue.show{animation:none;}}
 .listcue{bottom:10px;}
+.listcue.above-btn{bottom:80px;}
+.tablet .listcue.above-btn{bottom:88px;}
 .railcue{bottom:8px;width:24px;height:24px;}
 .railcue svg{width:12px;height:12px;}
 
@@ -326,7 +330,7 @@ function paneHTML(){
   const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
   return `<div class="pane-hd"><div class="ptitle">${s.sec}</div>${showCtl?`<div class="pcount num">${done}/${s.itemCount}</div>`:''}${showCtl?`<button class="clear-sec" onclick="clearSection(event)">בטל סימונים</button>`:''}</div>
     <div class="list" id="list" onscroll="onListScroll()">${listHTML()}</div>
-    <div class="cue listcue" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="cue listcue${showCtl?' above-btn':''}" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
     ${showCtl?runbarHTML():''}`;
 }
 // Build the run button reflecting current state: tick / next / done
@@ -371,7 +375,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.038T · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.040T · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com?subject=AirCheck%20POH%20-%20משוב%20מהאפליקציה"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
