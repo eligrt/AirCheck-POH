@@ -158,16 +158,32 @@ button,[onclick]{touch-action:manipulation;}
 .row.cur{background:rgba(31,111,63,.12);}
 /* ── run bar (big advance button) ── */
 .runbar{flex-shrink:0;padding:8px 12px 10px;background:var(--paper-hi);border-top:1px solid var(--line);}
-.runbtn{width:100%;border:none;border-radius:12px;padding:15px;font-family:'Heebo',sans-serif;font-size:16px;font-weight:800;color:#fff;background:var(--done);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .15s;}
-.tablet .runbtn{font-size:17px;padding:16px;}
-.runbtn:active{filter:brightness(.94);}
-.runbtn .rbadge{display:inline-flex;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);align-items:center;justify-content:center;flex-shrink:0;}
-.runbtn .rbadge svg{width:14px;height:14px;stroke:#fff;stroke-width:3;fill:none;}
-.runbtn[data-act="next"]{background:var(--ink);}
-.runbtn[data-act="done"]{background:var(--green-txt);}
-.runbtn[data-act="done"] .rbadge{background:var(--done);}
-.runbtn[data-act="done"] .rbadge svg{stroke-width:3.5;}
-.runbtn .rlbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* runway = tick state */
+.runbtn{position:relative;width:100%;height:60px;border:2px solid var(--gold,#c8a04a);border-radius:4px;background:#2a2218;cursor:pointer;overflow:hidden;padding:0;font-family:'Heebo',sans-serif;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.tablet .runbtn{height:66px;}
+.runbtn:active{filter:brightness(1.12);}
+.rw-row{position:absolute;top:0;bottom:0;right:44px;left:52px;display:flex;align-items:center;justify-content:space-between;pointer-events:none;z-index:1;}
+.rw-cd{width:16px;height:2px;background:#f4ecdc;opacity:.45;flex-shrink:0;}
+.rw-th{position:absolute;top:50%;transform:translateY(-50%);height:20px;width:14px;display:flex;flex-direction:column;justify-content:space-between;z-index:1;pointer-events:none;}
+.rw-tb{height:2px;width:100%;background:#f4ecdc;opacity:.65;border-radius:1px;}
+.rw-num{position:absolute;top:50%;color:#f4ecdc;opacity:.85;font-family:var(--mono);font-size:14px;font-weight:700;pointer-events:none;z-index:2;text-shadow:0 1px 1px rgba(0,0,0,.5);width:22px;text-align:center;line-height:1;}
+.rw-num.n18{right:24px;transform:translateY(-50%) rotate(-90deg);}
+.rw-num.n36{left:24px;transform:translateY(-50%) rotate(90deg);}
+.rw-plane{width:28px;height:28px;flex-shrink:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
+.rw-plane svg{transform:rotate(-90deg);}
+.tablet .rw-plane{width:30px;height:30px;}
+.runbtn .rlbl{flex-shrink:0;font-family:'Heebo',sans-serif;font-weight:800;font-size:18px;color:#f4ecdc;letter-spacing:.02em;white-space:nowrap;background:inherit;padding:2px 4px;border-radius:4px;}
+.tablet .runbtn .rlbl{font-size:19px;}
+/* plain buttons = next / done transitions */
+.plainbtn{width:100%;height:60px;border:2px solid var(--gold,#c8a04a);border-radius:7px;display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Heebo',sans-serif;font-weight:800;font-size:17px;color:#fff;padding:0 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.tablet .plainbtn{height:66px;font-size:18px;}
+.plainbtn:active{filter:brightness(1.08);}
+.plainbtn.next{background:#1c3d6e;}
+.plainbtn.done{background:#134a2c;cursor:default;}
+.plainbtn .pbi{flex-shrink:0;display:inline-flex;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);align-items:center;justify-content:center;}
+.plainbtn .pbi svg{width:14px;height:14px;stroke:#fff;stroke-width:3;fill:none;}
+.plainbtn.done .pbi svg{stroke-width:3.5;}
+.plainbtn .pbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .row.ro{cursor:default;}
 .hdr{display:flex;align-items:center;gap:12px;padding:14px 14px 6px;background:none;border-bottom:none;touch-action:manipulation;}
@@ -279,6 +295,8 @@ function nextSectionSameCat(){
   return (pos>=0&&pos<secs.length-1)?secs[pos+1]:null;
 }
 function resetCur(){curIdx=firstUndone(sections[activeSection],0);}
+// haptic buzz on tick (Android supports navigator.vibrate; iOS Safari ignores it silently)
+function buzz(){try{if(navigator.vibrate)navigator.vibrate(12);}catch(e){}}
 
 function colorbarHTML(){
   return CAT_ORDER.map(c=>{
@@ -333,27 +351,45 @@ function paneHTML(){
     <div class="cue listcue${showCtl?' above-btn':''}" id="listcue" onclick="scrollList()"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
     ${showCtl?runbarHTML():''}`;
 }
+// runway button pieces
+const RW_PLANE='<div class="rw-plane"><svg width="28" height="28" viewBox="0 0 34 34"><g fill="#f4ecdc" stroke="#1a1308" stroke-width=".6" stroke-linejoin="round"><path d="M17 3 L18.5 8 L18.5 14 L26 18 L26 20 L18.5 18.5 L18.5 24 L21 27 L21 28.5 L17 27.5 L13 28.5 L13 27 L15.5 24 L15.5 18.5 L8 20 L8 18 L15.5 14 L15.5 8 Z"/></g><circle cx="8" cy="19" r="1.2" fill="#ef4444"/><circle cx="26" cy="19" r="1.2" fill="#39ff8a"/></svg></div>';
+const RW_DASH='<div class="rw-cd"></div>';
+const RW_TH='<div class="rw-th" style="right:6px"><div class="rw-tb"></div><div class="rw-tb"></div><div class="rw-tb"></div><div class="rw-tb"></div></div><div class="rw-num n18">18</div><div class="rw-th" style="left:6px"><div class="rw-tb"></div><div class="rw-tb"></div><div class="rw-tb"></div><div class="rw-tb"></div></div><div class="rw-num n36">36</div>';
 // Build the run button reflecting current state: tick / next / done
 function runbarState(){
   const s=sections[activeSection];
   const done=s.rows.filter((r,i)=>r.type==='item'&&ticked[key(s.id,i)]).length;
   const allDone=done>=s.itemCount;
-  if(!allDone)return {act:'tick',badge:CHEV_DOWN,label:'סמן והמשך'};
+  if(!allDone)return {act:'tick',label:'סמן והמשך'};
   const nx=nextSectionSameCat();
-  if(nx)return {act:'next',badge:CHEV_BACK,label:'המשך: '+nx.sec};
-  return {act:'done',badge:CHK,label:'הסעיף הושלם'};
+  if(nx)return {act:'next',label:'המשך: '+nx.sec};
+  return {act:'done',label:'הסעיף הושלם'};
+}
+const CHEV_BACK_SVG='<svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>';
+const CHK_SVG='<svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>';
+// runway row (tick state): RTL, first element is rightmost → plane, dash, label, dash, dash
+function runwayRowHTML(){
+  return `<div class="rw-row">${RW_PLANE}${RW_DASH}<div class="rlbl">סמן והמשך</div>${RW_DASH}${RW_DASH}</div>`;
+}
+// inner content of the runbar for a given state
+function runbarInner(st){
+  if(st.act==='tick'){
+    return `<button class="runbtn" onclick="runAdvance()">${RW_TH}${runwayRowHTML()}</button>`;
+  }
+  if(st.act==='next'){
+    // chevron on the LEFT (direction of travel in RTL)
+    return `<button class="plainbtn next" onclick="runAdvance()"><span class="pbl">${st.label}</span><span class="pbi">${CHEV_BACK_SVG}</span></button>`;
+  }
+  // done: check on the RIGHT (status stamp, like row checkboxes)
+  return `<button class="plainbtn done"><span class="pbi">${CHK_SVG}</span><span class="pbl">${st.label}</span></button>`;
 }
 function runbarHTML(){
-  const st=runbarState();
-  return `<div class="runbar"><button class="runbtn" data-act="${st.act}" onclick="runAdvance()"><span class="rbadge">${st.badge}</span><span class="rlbl">${st.label}</span></button></div>`;
+  return `<div class="runbar">${runbarInner(runbarState())}</div>`;
 }
-// Refresh just the run button in place (no full re-render)
+// Refresh the run button in place (rebuild inner, since tick vs plain are different elements)
 function updateRunbar(){
-  const btn=document.querySelector('.runbtn');if(!btn)return;
-  const st=runbarState();
-  btn.setAttribute('data-act',st.act);
-  btn.querySelector('.rbadge').innerHTML=st.badge;
-  btn.querySelector('.rlbl').textContent=st.label;
+  const bar=document.querySelector('.runbar');if(!bar)return;
+  bar.innerHTML=runbarInner(runbarState());
 }
 function render(opts){
   opts=opts||{};
@@ -375,7 +411,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.041T · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.043T · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com?subject=AirCheck%20POH%20-%20משוב%20מהאפליקציה"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -396,6 +432,7 @@ function tick(i){
   const domRow=document.querySelector(`#list .row[data-idx="${i}"]`);
   if(domRow)domRow.classList.toggle('done', nowTicked);
   if(nowTicked){
+    buzz();
     // ticking any row moves the highlight to the next open item
     setCur(firstUndone(s,i+1),true);
   }else{
@@ -442,6 +479,7 @@ function runAdvance(){
     let i=curIdx;
     if(i<0||i>=s.rows.length||s.rows[i].type!=='item'||ticked[key(s.id,i)])i=firstUndone(s,0);
     if(i<0)return;
+    buzz();
     ticked[key(s.id,i)]=true;
     const row=document.querySelector(`#list .row[data-idx="${i}"]`);
     if(row)row.classList.add('done');
