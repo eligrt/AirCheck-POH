@@ -418,7 +418,7 @@ function render(opts){
       </div>
       <div class="pane p-${activeCat}">${paneHTML()}</div>
     </div>
-    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.048T · built by eligrt</div>
+    <div class="appfooter"><button class="reset" onclick="resetWelcome()">רענן</button>AirCheck POH · v1.01.049T · built by eligrt</div>
     <div class="confirm" id="confirm"><div class="card"><div class="chd">טיסה חדשה?</div><div class="cbd">כל הסימונים בכל הסעיפים יימחקו.</div><div class="btns"><button class="no" onclick="closeNF()">ביטול</button><button class="yes" onclick="doNF()">נקה הכל</button></div></div></div>
     <div class="welcome" id="welcome"><div class="wcard"><div class="whd">טייס, שים לב 👋</div><div class="wbd"><span class="lead">AirCheck_POH נבנתה כדי לאפשר לך בדּ"ח זמין ונגיש ב"קליק".</span>האפליקציה היא גרסת אונליין של הבדּ"ח אך אינה מחליפה את בדּ"ח ה HardCopy שבמטוס!<br><br><span class="pic">זכור שכטייס מפקד (PIC) מחובתך תמיד לוודא שאתה פועל על פי הבדּ"ח הרשמי של יצרן המטוס!</span><span class="note">וכמו בכל גרסה דיגיטלית, ייתכנו אי-דיוקים או תקלות. אם הבחנת במשהו, <a href="mailto:eligrt@gmail.com?subject=AirCheck%20POH%20-%20משוב%20מהאפליקציה"><span>אשמח אם תעדכן</span><svg class="mailico" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg></a>.</span><span class="sign">טיסה מהנה ובטוחה ✈️</span></div><div class="wbtn"><button onclick="closeWelcome()">הבנתי</button></div></div></div>
   </div></div>`;
@@ -532,6 +532,35 @@ function resetWelcome(){
 resetCur();
 render();
 maybeShowWelcome();
+
+/* iOS Safari: block page rubber-band. Only allow the touchmove when the
+   scrollable element can actually move in the drag direction; otherwise
+   the page itself bounces. */
+(function(){
+  var startY=0, el=null;
+  function scrollableAncestor(node){
+    while(node && node!==document.body){
+      if(node.classList && (node.classList.contains('list')||node.classList.contains('rail'))) return node;
+      node=node.parentNode;
+    }
+    return null;
+  }
+  document.addEventListener('touchstart',function(e){
+    if(e.touches.length!==1) return;
+    startY=e.touches[0].clientY;
+    el=scrollableAncestor(e.target);
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(!el||e.touches.length!==1) return;
+    var dy=e.touches[0].clientY-startY;
+    var atTop=el.scrollTop<=0;
+    var atBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-1;
+    // dy>0 = dragging down (pulling top); dy<0 = dragging up (pulling bottom)
+    if((atTop&&dy>0)||(atBottom&&dy<0)){
+      e.preventDefault();
+    }
+  },{passive:false});
+})();
 </script>
 
 <!-- ══ ANALYTICS CAPTURE (Firebase Realtime DB) ══
