@@ -1,0 +1,21 @@
+{
+  "name": "AirCheck POH",
+  "short_name": "POH·T",
+  "description": "Your checklist, one tap away",
+  "start_url": "./AirCheck_POH_TEST.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4eee1",
+  "theme_color": "#1c3d6e",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "poh_icon_android.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
