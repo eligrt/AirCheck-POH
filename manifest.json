@@ -1,0 +1,23 @@
+{
+  "name": "AirCheck POH",
+  "short_name": "AirCheck POH",
+  "start_url": "./AirCheck_POH.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4ecdc",
+  "theme_color": "#1c3d6e",
+  "icons": [
+    {
+      "src": "poh_icon_android.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "poh_icon_ios.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
